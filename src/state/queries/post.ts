@@ -14,6 +14,7 @@ import {useAgent, useSession} from '#/state/session'
 import * as userActionHistory from '#/state/userActionHistory'
 import {useAnalytics} from '#/analytics'
 import {type Metrics, toClout} from '#/analytics/metrics'
+import {createMultiplicityLike, createMultiplicityRepost} from '#/multiplicity'
 import {useIsThreadMuted, useSetThreadMute} from '../cache/thread-mutes'
 import {findProfileQueryData} from './profile'
 
@@ -215,7 +216,7 @@ function usePostLikeMutation(
             : undefined,
         feedDescriptor: feedDescriptor,
       })
-      return agent.like(uri, cid, via)
+      return createMultiplicityLike(agent, {uri, cid}, via)
     },
   })
 }
@@ -323,7 +324,7 @@ function usePostRepostMutation(
         logContext,
         feedDescriptor,
       })
-      return agent.repost(uri, cid, via)
+      return createMultiplicityRepost(agent, {uri, cid}, via)
     },
   })
 }

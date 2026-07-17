@@ -37,6 +37,7 @@ import {useAgent, useSession} from '#/state/session'
 import * as userActionHistory from '#/state/userActionHistory'
 import {useAnalytics} from '#/analytics'
 import {type Metrics, toClout} from '#/analytics/metrics'
+import {createMultiplicityFollow} from '#/multiplicity'
 import type * as bsky from '#/types/bsky'
 import {
   ProgressGuideAction,
@@ -397,7 +398,7 @@ function useProfileFollowMutation(
         position,
         contextProfileDid,
       })
-      return await agent.follow(did)
+      return await createMultiplicityFollow(agent, did)
     },
   })
 }

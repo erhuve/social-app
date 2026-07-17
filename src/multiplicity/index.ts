@@ -4,6 +4,15 @@ export {createFakeMultiplicityAdapter} from './fake-adapter'
 export {createFallbackAction} from './fallback'
 export type {HttpMultiplicityAdapterOptions} from './http-adapter'
 export {createHttpMultiplicityAdapter} from './http-adapter'
+export {
+  createMultiplicityFollow,
+  createMultiplicityLike,
+  createMultiplicityRepost,
+  deleteMultiplicityFollow,
+  deleteMultiplicityLike,
+  deleteMultiplicityRepost,
+} from './records'
+export {enqueueSubjectMutation} from './subject-queue'
 export type {
   ActorMultiplicityState,
   MultiplicityActionState,

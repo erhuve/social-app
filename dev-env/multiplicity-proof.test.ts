@@ -10,6 +10,11 @@ import {
   type BskyAgent,
 } from '@atproto/api'
 
+import {
+  createMultiplicityFollow,
+  createMultiplicityLike,
+  createMultiplicityRepost,
+} from '../src/multiplicity/records.ts'
 import {createServer} from './test-pds.ts'
 
 const COLLECTIONS = {
@@ -58,7 +63,7 @@ async function assertRepositoryCounts(
   }
 }
 
-test('native records preserve multiplicity while AppView projects binary state', async () => {
+void test('native records preserve multiplicity while AppView projects binary state', async () => {
   const server = await createServer()
 
   try {
@@ -119,18 +124,9 @@ test('native records preserve multiplicity while AppView projects binary state',
     } as Record<keyof typeof COLLECTIONS, string[]>
 
     for (let i = 0; i < 3; i++) {
-      const like = await alice.agent.app.bsky.feed.like.create(
-        {repo: alice.did, validate: false},
-        actionRecords.like,
-      )
-      const repost = await alice.agent.app.bsky.feed.repost.create(
-        {repo: alice.did, validate: false},
-        actionRecords.repost,
-      )
-      const follow = await alice.agent.app.bsky.graph.follow.create(
-        {repo: alice.did, validate: false},
-        actionRecords.follow,
-      )
+      const like = await createMultiplicityLike(alice.agent, post)
+      const repost = await createMultiplicityRepost(alice.agent, post)
+      const follow = await createMultiplicityFollow(alice.agent, bob.did)
       records.like.push(like.uri)
       records.repost.push(repost.uri)
       records.follow.push(follow.uri)
