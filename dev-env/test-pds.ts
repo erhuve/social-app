@@ -63,7 +63,7 @@ export async function createServer(
     inviteRequired: false,
   },
 ): Promise<TestPDS> {
-  const port = 3000
+  const port = await getPort()
   const port2 = await getPort(port + 1)
   const port3 = await getPort(port2 + 1)
   const pdsUrl = `http://localhost:${port}`

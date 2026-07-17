@@ -9,6 +9,16 @@ Install dependencies in `/dev-env`
 cd dev-env && pnpm i
 ```
 
+### Multiplicity protocol proof
+
+The multiplicity proof starts a disposable PDS and AppView with temporary Postgres
+and Redis containers, verifies repeated likes, reposts, and follows, then removes
+the containers:
+
+```
+cd dev-env && pnpm test:multiplicity
+```
+
 ## Using Maestro
 
 1. Install Maestro by following [these instructions](https://maestro.mobile.dev/getting-started/installing-maestro). This will help us run the E2E tests.
