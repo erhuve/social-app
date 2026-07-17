@@ -1,5 +1,7 @@
 export type {FakeMultiplicitySeed} from './fake-adapter'
 export {createFakeMultiplicityAdapter} from './fake-adapter'
+export type {HttpMultiplicityAdapterOptions} from './http-adapter'
+export {createHttpMultiplicityAdapter} from './http-adapter'
 export type {
   ActorMultiplicityState,
   MultiplicityActionState,
