@@ -14,6 +14,7 @@ import {AnimatedLikeIcon} from '#/lib/custom-animations/LikeIcon'
 import {useOpenComposer} from '#/lib/hooks/useOpenComposer'
 import {type Shadow} from '#/state/cache/types'
 import {useFeedFeedbackContext} from '#/state/feed-feedback'
+import {usePostMultiplicity} from '#/state/queries/multiplicity'
 import {
   usePostLikeMutationQueue,
   usePostRepostMutationQueue,
@@ -77,6 +78,9 @@ let PostControls = ({
   const {t: l} = useLingui()
   const {openComposer} = useOpenComposer()
   const {feedDescriptor} = useFeedFeedbackContext()
+  const multiplicity = usePostMultiplicity(post)
+  const likeCount = multiplicity.like.count
+  const repostCount = multiplicity.repost.count
   const [queueLike, queueUnlike] = usePostLikeMutationQueue(
     post,
     viaRepost,
@@ -257,7 +261,7 @@ let PostControls = ({
         <View style={[a.flex_1, a.align_start]}>
           <RepostButton
             isReposted={!!post.viewer?.repost}
-            repostCount={(post.repostCount ?? 0) + (post.quoteCount ?? 0)}
+            repostCount={repostCount + (post.quoteCount ?? 0)}
             onRepost={() => void onRepost()}
             onQuote={onQuote}
             big={big}
@@ -274,7 +278,7 @@ let PostControls = ({
             label={
               post.viewer?.like
                 ? l({
-                    message: `Unlike (${plural(post.likeCount || 0, {
+                    message: `Unlike (${plural(likeCount, {
                       one: '# like',
                       other: '# likes',
                     })})`,
@@ -282,7 +286,7 @@ let PostControls = ({
                       'Accessibility label for the like button when the post has been liked, verb followed by number of likes and noun',
                   })
                 : l({
-                    message: `Like (${plural(post.likeCount || 0, {
+                    message: `Like (${plural(likeCount, {
                       one: '# like',
                       other: '# likes',
                     })})`,
@@ -296,7 +300,7 @@ let PostControls = ({
               hasBeenToggled={hasLikeIconBeenToggled}
             />
             <CountWheel
-              count={post.likeCount ?? 0}
+              count={likeCount}
               isToggled={Boolean(post.viewer?.like)}
               hasBeenToggled={hasLikeIconBeenToggled}
               renderCount={({count}) => (

@@ -113,6 +113,9 @@ export const SENTRY_DSN: string | undefined = process.env.EXPO_PUBLIC_SENTRY_DSN
 export const BITDRIFT_API_KEY: string | undefined =
   process.env.EXPO_PUBLIC_BITDRIFT_API_KEY
 
+export const MULTIPLICITY_SERVICE_URL: string | undefined =
+  process.env.EXPO_PUBLIC_MULTIPLICITY_SERVICE_URL
+
 /**
  * GCP project ID which is required for native device attestation. On web, this
  * should be unset and evaluate to 0.

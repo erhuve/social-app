@@ -20,6 +20,7 @@ import {NON_BREAKING_SPACE} from '#/lib/strings/constants'
 import {sanitizeDisplayName} from '#/lib/strings/display-names'
 import {sanitizeHandle} from '#/lib/strings/handles'
 import {useProfileShadow} from '#/state/cache/profile-shadow'
+import {useActorMultiplicity} from '#/state/queries/multiplicity'
 import {useProfileFollowMutationQueue} from '#/state/queries/profile'
 import {useSession} from '#/state/session'
 import {PreviewableUserAvatar, UserAvatar} from '#/view/com/util/UserAvatar'
@@ -482,6 +483,7 @@ export function FollowButtonInner({
 }: FollowButtonProps) {
   const {t: l} = useLingui()
   const profile = useProfileShadow(profileUnshadowed)
+  const multiplicity = useActorMultiplicity(profile)
   const moderation = moderateProfile(profile, moderationOpts)
   const [queueFollow, queueUnfollow] = useProfileFollowMutationQueue(
     profile,
@@ -536,10 +538,13 @@ export function FollowButtonInner({
     }
   }
 
-  const unfollowLabel = l({
-    message: 'Following',
-    comment: 'User is following this account, click to unfollow',
-  })
+  const unfollowLabel =
+    multiplicity.follow.count > 1
+      ? l`Following ×${multiplicity.follow.count}`
+      : l({
+          message: 'Following',
+          comment: 'User is following this account, click to unfollow',
+        })
   const followLabel = profile.viewer?.followedBy
     ? l({
         message: 'Follow back',

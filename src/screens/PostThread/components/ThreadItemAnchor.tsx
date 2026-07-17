@@ -22,6 +22,7 @@ import {
 } from '#/state/cache/post-shadow'
 import {useProfileShadow} from '#/state/cache/profile-shadow'
 import {FeedFeedbackProvider, useFeedFeedback} from '#/state/feed-feedback'
+import {usePostMultiplicity} from '#/state/queries/multiplicity'
 import {type ThreadItem} from '#/state/queries/usePostThread/types'
 import {useSession} from '#/state/session'
 import {type OnPostSuccessData} from '#/state/shell/composer'
@@ -183,6 +184,7 @@ const ThreadItemAnchorInner = memo(function ThreadItemAnchorInner({
   const formatPostStatCount = useFormatPostStatCount()
 
   const post = postShadow
+  const multiplicity = usePostMultiplicity(post)
   const record = item.value.post.record
   const moderation = item.moderation
   const authorShadow = useProfileShadow(post.author)
@@ -420,8 +422,8 @@ const ThreadItemAnchorInner = memo(function ThreadItemAnchorInner({
               post={item.value.post}
               isThreadAuthor={isThreadAuthor}
             />
-            {post.repostCount !== 0 ||
-            post.likeCount !== 0 ||
+            {multiplicity.repost.count !== 0 ||
+            multiplicity.like.count !== 0 ||
             post.quoteCount !== 0 ||
             post.bookmarkCount !== 0 ? (
               // Show this section unless we're *sure* it has no engagement.
@@ -441,7 +443,7 @@ const ThreadItemAnchorInner = memo(function ThreadItemAnchorInner({
                   t.atoms.border_contrast_low,
                 ]}>
                 <LikesStat post={post} />
-                {post.repostCount != null && post.repostCount !== 0 ? (
+                {multiplicity.repost.count !== 0 ? (
                   <Link to={repostsHref} label={l`Reposts of this post`}>
                     <Text
                       testID="repostCount-expanded"
@@ -449,10 +451,10 @@ const ThreadItemAnchorInner = memo(function ThreadItemAnchorInner({
                       <Trans comment="Repost count display, the <0> tags enclose the number of reposts in bold (will never be 0)">
                         <Text
                           style={[a.text_md, a.font_semi_bold, t.atoms.text]}>
-                          {formatPostStatCount(post.repostCount)}
+                          {formatPostStatCount(multiplicity.repost.count)}
                         </Text>{' '}
                         <Plural
-                          value={post.repostCount}
+                          value={multiplicity.repost.count}
                           one="repost"
                           other="reposts"
                         />

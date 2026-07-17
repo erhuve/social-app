@@ -7,6 +7,7 @@ import {makeProfileLink} from '#/lib/routes/links'
 import {sanitizeDisplayName} from '#/lib/strings/display-names'
 import {enforceLen} from '#/lib/strings/helpers'
 import {useModerationOpts} from '#/state/preferences/moderation-opts'
+import {usePostMultiplicity} from '#/state/queries/multiplicity'
 import {useLikedBySampleQuery} from '#/state/queries/post-liked-by'
 import {useSession} from '#/state/session'
 import {atoms as a, useBreakpoints, useTheme} from '#/alf'
@@ -40,8 +41,9 @@ export function LikesStat({post}: {post: AppBskyFeedDefs.PostView}) {
   const moderationOpts = useModerationOpts()
   const formatPostStatCount = useFormatPostStatCount()
   const ax = useAnalytics()
+  const multiplicity = usePostMultiplicity(post)
 
-  const likeCount = post.likeCount ?? 0
+  const likeCount = multiplicity.like.count
   /*
    * Kill switch for the getLikes sample request itself, separate from the
    * display gate below.

@@ -7,6 +7,7 @@ import {useNavigation} from '@react-navigation/native'
 
 import {logger} from '#/logger'
 import {useProfileShadow} from '#/state/cache/profile-shadow'
+import {useActorMultiplicity} from '#/state/queries/multiplicity'
 import {
   useProfileFollowMutationQueue,
   useProfileQuery,
@@ -63,6 +64,7 @@ function PostThreadFollowBtnLoaded({
   const {_} = useLingui()
   const {gtMobile} = useBreakpoints()
   const profile = useProfileShadow(profileUnshadowed)
+  const multiplicity = useActorMultiplicity(profile)
   const [queueFollow, queueUnfollow] = useProfileFollowMutationQueue(
     profile,
     'PostThreadItem',
@@ -156,6 +158,8 @@ function PostThreadFollowBtnLoaded({
           ) : (
             <Trans>Follow</Trans>
           )
+        ) : multiplicity.follow.count > 1 ? (
+          <Trans>Following ×{multiplicity.follow.count}</Trans>
         ) : (
           <Trans>Following</Trans>
         )}

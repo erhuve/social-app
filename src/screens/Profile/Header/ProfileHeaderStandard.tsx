@@ -15,6 +15,7 @@ import {useHaptics} from '#/lib/haptics'
 import {sanitizeDisplayName} from '#/lib/strings/display-names'
 import {logger} from '#/logger'
 import {type Shadow, useProfileShadow} from '#/state/cache/profile-shadow'
+import {useActorMultiplicity} from '#/state/queries/multiplicity'
 import {
   useProfileBlockMutationQueue,
   useProfileFollowMutationQueue,
@@ -223,6 +224,7 @@ export function HeaderStandardButtons({
   const {_} = useLingui()
   const ax = useAnalytics()
   const {hasSession, currentAccount} = useSession()
+  const multiplicity = useActorMultiplicity(profile)
   const playHaptic = useHaptics()
   const requireAuth = useRequireAuth()
   const [queueFollow, queueUnfollow] = useProfileFollowMutationQueue(
@@ -235,6 +237,10 @@ export function HeaderStandardButtons({
   const unblockPromptControl = Prompt.usePromptControl()
 
   const isMe = currentAccount?.did === profile.did
+  const followingLabel =
+    multiplicity.follow.count > 1
+      ? _(msg`Following ×${multiplicity.follow.count}`)
+      : _(msg`Following`)
 
   const onPressFollow = () => {
     playHaptic()
@@ -402,7 +408,7 @@ export function HeaderStandardButtons({
               {!profile.viewer?.following && <ButtonIcon icon={Plus} />}
               <ButtonText>
                 {profile.viewer?.following ? (
-                  <Trans>Following</Trans>
+                  followingLabel
                 ) : profile.viewer?.followedBy ? (
                   <Trans>Follow back</Trans>
                 ) : (
