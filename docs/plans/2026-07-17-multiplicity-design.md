@@ -197,16 +197,17 @@ but they are only first-class counts/actions in the MVP.
 Exit gate: a checked-in automated integration test demonstrates create, index,
 count, single delete, and delete-all behavior without touching a real account.
 
-### Stage 1: Fork Baseline And Product Boundary
+### Stage 1: Fork Baseline And Product Foundation
 
 - Make web development and the existing test suite reproducible.
-- Add a feature flag that leaves upstream behavior unchanged by default.
+- Treat multiplicity as the fork's default behavior rather than maintaining a
+  parallel binary mode.
 - Replace Bluesky branding, support links, analytics, and error reporting before
   any distributable build, as required by upstream's fork guidelines.
 - Define shared multiplicity types and a fake adapter for UI development.
 
-Exit gate: upstream behavior is unchanged with the flag off, and a clearly branded
-development build runs with the flag on.
+Exit gate: the shared contract and fake adapter are tested, and a clearly branded
+development build runs with multiplicity behavior.
 
 ### Stage 2: Multiplicity Index
 
@@ -232,7 +233,7 @@ profile, and detail screens without changing write behavior.
 
 ### Stage 4: Repeatable Actions
 
-- Replace binary post and profile controls behind the feature flag.
+- Replace binary post and profile controls directly.
 - Make every tap add one record.
 - Add long-press `Remove one` and `Remove all` controls.
 - Implement per-subject serialization, optimistic integer deltas, rollback, and
