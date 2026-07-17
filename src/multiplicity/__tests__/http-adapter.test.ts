@@ -1,0 +1,121 @@
+import {createHttpMultiplicityAdapter} from '../http-adapter'
+
+const POST_URI = 'at://did:plc:bob/app.bsky.feed.post/one'
+const ACTOR_DID = 'did:plc:bob'
+const VIEWER_DID = 'did:plc:alice'
+
+function serviceResponse() {
+  return {
+    posts: {
+      [POST_URI]: {
+        like: {
+          count: 3,
+          viewerRecordUris: ['at://did:plc:alice/app.bsky.feed.like/one'],
+        },
+        repost: {count: 0, viewerRecordUris: []},
+      },
+      'at://did:plc:unrequested/app.bsky.feed.post/one': {
+        like: {count: 99, viewerRecordUris: []},
+        repost: {count: 0, viewerRecordUris: []},
+      },
+    },
+    actors: {
+      [ACTOR_DID]: {
+        follow: {count: 2, viewerRecordUris: []},
+      },
+    },
+  }
+}
+
+describe('createHttpMultiplicityAdapter', () => {
+  it('posts a batch and returns only requested validated state', async () => {
+    const fetch = jest.fn(() =>
+      Promise.resolve(Response.json(serviceResponse())),
+    )
+    const adapter = createHttpMultiplicityAdapter({
+      baseUrl: 'https://multiplicity.example/base/',
+      fetch,
+    })
+    const request = {
+      viewerDid: VIEWER_DID,
+      postUris: [POST_URI],
+      actorDids: [ACTOR_DID],
+    }
+
+    const result = await adapter.getBatch(request)
+
+    expect(fetch).toHaveBeenCalledWith(
+      'https://multiplicity.example/base/v1/multiplicity/batch',
+      expect.objectContaining({
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(request),
+      }),
+    )
+    expect(Object.keys(result.posts)).toEqual([POST_URI])
+    expect(result.posts[POST_URI].like.count).toBe(3)
+  })
+
+  it('rejects service errors', async () => {
+    const adapter = createHttpMultiplicityAdapter({
+      baseUrl: 'https://multiplicity.example',
+      fetch: () =>
+        Promise.resolve(Response.json({error: 'unavailable'}, {status: 503})),
+    })
+
+    await expect(
+      adapter.getBatch({viewerDid: VIEWER_DID, postUris: [], actorDids: []}),
+    ).rejects.toThrow('status 503')
+  })
+
+  it.each([
+    {
+      name: 'negative counts',
+      response: {
+        ...serviceResponse(),
+        posts: {
+          [POST_URI]: {
+            like: {count: -1, viewerRecordUris: []},
+            repost: {count: 0, viewerRecordUris: []},
+          },
+        },
+      },
+      message: 'non-negative safe integer',
+    },
+    {
+      name: 'malformed viewer records',
+      response: {
+        ...serviceResponse(),
+        posts: {
+          [POST_URI]: {
+            like: {count: 1, viewerRecordUris: [7]},
+            repost: {count: 0, viewerRecordUris: []},
+          },
+        },
+      },
+      message: 'array of strings',
+    },
+  ])('rejects $name', async ({response, message}) => {
+    const adapter = createHttpMultiplicityAdapter({
+      baseUrl: 'https://multiplicity.example',
+      fetch: () => Promise.resolve(Response.json(response)),
+    })
+
+    await expect(
+      adapter.getBatch({
+        viewerDid: VIEWER_DID,
+        postUris: [POST_URI],
+        actorDids: [],
+      }),
+    ).rejects.toThrow(message)
+  })
+
+  it('rejects non-HTTP service URLs at construction', () => {
+    expect(() =>
+      createHttpMultiplicityAdapter({baseUrl: 'file:///tmp/index'}),
+    ).toThrow('HTTP or HTTPS')
+  })
+})
