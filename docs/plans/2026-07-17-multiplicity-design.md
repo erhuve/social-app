@@ -65,9 +65,12 @@ shared API contract until that split is made.
 ## Protocol Semantics
 
 `app.bsky.feed.like`, `app.bsky.feed.repost`, and
-`app.bsky.graph.follow` all use TID record keys. The current TypeScript agent creates
-a new record on each `like`, `repost`, or `follow` call. Bluesky's AppView database,
-not the repository schema, imposes uniqueness on actor-subject pairs.
+`app.bsky.graph.follow` all use TID record keys. Raw creates receive a new record
+key, but current PDS validation treats the subject backlinks for likes, reposts,
+and follows as exclusive: a validated create deletes the actor's previous
+conflicting record. Multiplicity writes must validate the known lexicon locally,
+then call `com.atproto.repo.createRecord` with `validate: false`. Bluesky's AppView
+separately projects actor-subject pairs as unique rows.
 
 The index groups likes and reposts by subject AT URI while retaining the strong-ref
 CID for audit and validation. Follows group by subject DID. Deletes remove an exact

@@ -3,7 +3,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "start": "NODE_ENV=development ./dev-infra/with-test-redis-and-db.sh node ./mock-server.ts"
+    "start": "NODE_ENV=development ./dev-infra/with-test-redis-and-db.sh node ./mock-server.ts",
+    "test:multiplicity": "./dev-infra/with-test-redis-and-db.sh node --experimental-strip-types --test --test-force-exit ./multiplicity-proof.test.ts"
   },
   "dependencies": {
     "@atproto/api": "^0.20.22",
