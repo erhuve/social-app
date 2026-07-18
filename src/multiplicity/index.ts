@@ -1,3 +1,9 @@
+export {
+  addPendingRecord,
+  confirmPendingRecord,
+  removeRecords,
+  restoreRecords,
+} from './action-state'
 export {createBatchedMultiplicityAdapter} from './batched-adapter'
 export type {FakeMultiplicitySeed} from './fake-adapter'
 export {createFakeMultiplicityAdapter} from './fake-adapter'

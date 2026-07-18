@@ -1,4 +1,4 @@
-import {useCallback} from 'react'
+import {useCallback, useMemo} from 'react'
 import {type AppBskyActorDefs, type AppBskyFeedDefs, AtUri} from '@atproto/api'
 import {
   type QueryClient,
@@ -14,8 +14,20 @@ import {useAgent, useSession} from '#/state/session'
 import * as userActionHistory from '#/state/userActionHistory'
 import {useAnalytics} from '#/analytics'
 import {type Metrics, toClout} from '#/analytics/metrics'
-import {createMultiplicityLike, createMultiplicityRepost} from '#/multiplicity'
+import {
+  addPendingRecord,
+  confirmPendingRecord,
+  createFallbackAction,
+  createMultiplicityLike,
+  createMultiplicityRepost,
+  enqueueSubjectMutation,
+  type MultiplicityActionState,
+  type PostMultiplicityState,
+  removeRecords,
+  restoreRecords,
+} from '#/multiplicity'
 import {useIsThreadMuted, useSetThreadMute} from '../cache/thread-mutes'
+import {POST_MULTIPLICITY_RQKEY, updatePostMultiplicity} from './multiplicity'
 import {findProfileQueryData} from './profile'
 
 const RQKEY_ROOT = 'post'
@@ -121,60 +133,22 @@ export function usePostLikeMutationQueue(
   feedDescriptor: string | undefined,
   logContext: Metrics['post:like']['logContext'],
 ) {
-  const queryClient = useQueryClient()
-  const postUri = post.uri
-  const postCid = post.cid
-  const initialLikeUri = post.viewer?.like
   const likeMutation = usePostLikeMutation(feedDescriptor, logContext, post)
   const unlikeMutation = usePostUnlikeMutation(feedDescriptor, logContext, post)
-
-  const queueToggle = useToggleMutationQueue({
-    initialState: initialLikeUri,
-    runMutation: async (prevLikeUri, shouldLike) => {
-      if (shouldLike) {
-        const {uri: likeUri} = await likeMutation.mutateAsync({
-          uri: postUri,
-          cid: postCid,
-          via: viaRepost,
-        })
-        userActionHistory.like([postUri])
-        return likeUri
-      } else {
-        if (prevLikeUri) {
-          await unlikeMutation.mutateAsync({
-            postUri: postUri,
-            likeUri: prevLikeUri,
-          })
-          userActionHistory.unlike([postUri])
-        }
-        return undefined
-      }
-    },
-    onSuccess(finalLikeUri) {
-      // finalize
-      updatePostShadow(queryClient, postUri, {
-        likeUri: finalLikeUri,
-      })
-    },
+  return usePostMultiplicityMutationQueue({
+    post,
+    action: 'like',
+    createRecord: () =>
+      likeMutation.mutateAsync({
+        uri: post.uri,
+        cid: post.cid,
+        via: viaRepost,
+      }),
+    deleteRecord: uri =>
+      unlikeMutation.mutateAsync({postUri: post.uri, likeUri: uri}),
+    onCreate: () => userActionHistory.like([post.uri]),
+    onDelete: () => userActionHistory.unlike([post.uri]),
   })
-
-  const queueLike = useCallback(() => {
-    // optimistically update
-    updatePostShadow(queryClient, postUri, {
-      likeUri: 'pending',
-    })
-    return queueToggle(true)
-  }, [queryClient, postUri, queueToggle])
-
-  const queueUnlike = useCallback(() => {
-    // optimistically update
-    updatePostShadow(queryClient, postUri, {
-      likeUri: undefined,
-    })
-    return queueToggle(false)
-  }, [queryClient, postUri, queueToggle])
-
-  return [queueLike, queueUnlike] as const
 }
 
 function usePostLikeMutation(
@@ -247,10 +221,6 @@ export function usePostRepostMutationQueue(
   feedDescriptor: string | undefined,
   logContext: Metrics['post:repost']['logContext'],
 ) {
-  const queryClient = useQueryClient()
-  const postUri = post.uri
-  const postCid = post.cid
-  const initialRepostUri = post.viewer?.repost
   const repostMutation = usePostRepostMutation(feedDescriptor, logContext, post)
   const unrepostMutation = usePostUnrepostMutation(
     feedDescriptor,
@@ -258,51 +228,130 @@ export function usePostRepostMutationQueue(
     post,
   )
 
-  const queueToggle = useToggleMutationQueue({
-    initialState: initialRepostUri,
-    runMutation: async (prevRepostUri, shouldRepost) => {
-      if (shouldRepost) {
-        const {uri: repostUri} = await repostMutation.mutateAsync({
-          uri: postUri,
-          cid: postCid,
-          via: viaRepost,
-        })
-        return repostUri
-      } else {
-        if (prevRepostUri) {
-          await unrepostMutation.mutateAsync({
-            postUri: postUri,
-            repostUri: prevRepostUri,
-          })
-        }
-        return undefined
-      }
-    },
-    onSuccess(finalRepostUri) {
-      // finalize
-      updatePostShadow(queryClient, postUri, {
-        repostUri: finalRepostUri,
-      })
-    },
+  return usePostMultiplicityMutationQueue({
+    post,
+    action: 'repost',
+    createRecord: () =>
+      repostMutation.mutateAsync({
+        uri: post.uri,
+        cid: post.cid,
+        via: viaRepost,
+      }),
+    deleteRecord: uri =>
+      unrepostMutation.mutateAsync({postUri: post.uri, repostUri: uri}),
   })
+}
 
-  const queueRepost = useCallback(() => {
-    // optimistically update
-    updatePostShadow(queryClient, postUri, {
-      repostUri: 'pending',
+let nextPendingRecordId = 0
+
+function usePostMultiplicityMutationQueue({
+  post,
+  action,
+  createRecord,
+  deleteRecord,
+  onCreate,
+  onDelete,
+}: {
+  post: Shadow<AppBskyFeedDefs.PostView>
+  action: 'like' | 'repost'
+  createRecord: () => Promise<{uri: string}>
+  deleteRecord: (uri: string) => Promise<unknown>
+  onCreate?: () => void
+  onDelete?: () => void
+}) {
+  const queryClient = useQueryClient()
+  const {currentAccount} = useSession()
+  const viewerDid = currentAccount?.did ?? ''
+  const subjectKey = `${action}:${post.uri}`
+  const fallback: PostMultiplicityState = useMemo(
+    () => ({
+      like: createFallbackAction(post.likeCount, post.viewer?.like),
+      repost: createFallbackAction(post.repostCount, post.viewer?.repost),
+    }),
+    [post.likeCount, post.repostCount, post.viewer?.like, post.viewer?.repost],
+  )
+
+  const updateAction = useCallback(
+    (update: (state: MultiplicityActionState) => MultiplicityActionState) => {
+      updatePostMultiplicity(
+        queryClient,
+        viewerDid,
+        post.uri,
+        fallback,
+        state => ({...state, [action]: update(state[action])}),
+      )
+    },
+    [action, fallback, post.uri, queryClient, viewerDid],
+  )
+
+  const getAction = useCallback(() => {
+    const state = queryClient.getQueryData<PostMultiplicityState>(
+      POST_MULTIPLICITY_RQKEY(viewerDid, post.uri),
+    )
+    return state?.[action] ?? fallback[action]
+  }, [action, fallback, post.uri, queryClient, viewerDid])
+
+  const queueCreate = useCallback(() => {
+    const pendingUri = `pending:${action}:${++nextPendingRecordId}`
+    updateAction(state => addPendingRecord(state, pendingUri))
+    return enqueueSubjectMutation(subjectKey, async () => {
+      try {
+        const {uri} = await createRecord()
+        updateAction(state => confirmPendingRecord(state, pendingUri, uri))
+        onCreate?.()
+        return uri
+      } catch (error) {
+        updateAction(state => removeRecords(state, [pendingUri]))
+        throw error
+      }
     })
-    return queueToggle(true)
-  }, [queryClient, postUri, queueToggle])
+  }, [action, createRecord, onCreate, subjectKey, updateAction])
 
-  const queueUnrepost = useCallback(() => {
-    // optimistically update
-    updatePostShadow(queryClient, postUri, {
-      repostUri: undefined,
-    })
-    return queueToggle(false)
-  }, [queryClient, postUri, queueToggle])
+  const queueRemoveOne = useCallback(
+    () =>
+      enqueueSubjectMutation(subjectKey, async () => {
+        const uri = getAction().viewerRecordUris.find(
+          recordUri => !recordUri.startsWith('pending:'),
+        )
+        if (!uri) return undefined
+        updateAction(state => removeRecords(state, [uri]))
+        try {
+          await deleteRecord(uri)
+          onDelete?.()
+          return uri
+        } catch (error) {
+          updateAction(state => restoreRecords(state, [uri]))
+          throw error
+        }
+      }),
+    [deleteRecord, getAction, onDelete, subjectKey, updateAction],
+  )
 
-  return [queueRepost, queueUnrepost] as const
+  const queueRemoveAll = useCallback(
+    () =>
+      enqueueSubjectMutation(subjectKey, async () => {
+        const uris = getAction().viewerRecordUris.filter(
+          uri => !uri.startsWith('pending:'),
+        )
+        if (uris.length === 0) return []
+        updateAction(state => removeRecords(state, uris))
+        const results = await Promise.allSettled(uris.map(deleteRecord))
+        const failed = uris.filter(
+          (_, index) => results[index]?.status === 'rejected',
+        )
+        if (failed.length > 0) {
+          updateAction(state => restoreRecords(state, failed))
+          throw new Error(
+            `Removed ${uris.length - failed.length} of ${uris.length} ${action} records`,
+          )
+        }
+        onDelete?.()
+        return uris
+      }),
+    [action, deleteRecord, getAction, onDelete, subjectKey, updateAction],
+  )
+
+  return [queueCreate, queueRemoveOne, queueRemoveAll] as const
 }
 
 function usePostRepostMutation(

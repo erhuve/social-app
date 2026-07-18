@@ -12,6 +12,7 @@ import * as Dialog from '#/components/Dialog'
 import {CloseQuote_Stroke2_Corner1_Rounded as QuoteIcon} from '#/components/icons/Quote'
 import {Repost_Stroke2_Corner3_Rounded as RepostIcon} from '#/components/icons/Repost'
 import {useFormatPostStatCount} from '#/components/PostControls/util'
+import * as Toast from '#/components/Toast'
 import {Text} from '#/components/Typography'
 import {
   PostControlButton,
@@ -23,6 +24,9 @@ interface Props {
   isReposted: boolean
   repostCount?: number
   onRepost: () => void
+  onRemoveOne: () => Promise<unknown>
+  onRemoveAll: () => Promise<unknown>
+  viewerRepostCount: number
   onQuote: () => void
   big?: boolean
   embeddingDisabled: boolean
@@ -32,6 +36,9 @@ let RepostButton = ({
   isReposted,
   repostCount,
   onRepost,
+  onRemoveOne,
+  onRemoveAll,
+  viewerRepostCount,
   onQuote,
   big,
   embeddingDisabled,
@@ -42,16 +49,9 @@ let RepostButton = ({
   const dialogControl = Dialog.useDialogControl()
   const formatPostStatCount = useFormatPostStatCount()
 
-  const onPress = () => requireAuth(() => dialogControl.open())
+  const onPress = () => requireAuth(onRepost)
 
-  const onLongPress = () =>
-    requireAuth(() => {
-      if (embeddingDisabled) {
-        dialogControl.open()
-      } else {
-        onQuote()
-      }
-    })
+  const onLongPress = () => requireAuth(() => dialogControl.open())
 
   return (
     <>
@@ -66,12 +66,12 @@ let RepostButton = ({
           isReposted
             ? _(
                 msg({
-                  message: `Undo repost (${plural(repostCount || 0, {
+                  message: `Repost again (${plural(repostCount || 0, {
                     one: '# repost',
                     other: '# reposts',
                   })})`,
                   comment:
-                    'Accessibility label for the repost button when the post has been reposted, verb followed by number of reposts and noun',
+                    'Accessibility label for adding another repost, verb followed by number of reposts and noun',
                 }),
               )
             : _(
@@ -99,6 +99,9 @@ let RepostButton = ({
         <RepostButtonDialogInner
           isReposted={isReposted}
           onRepost={onRepost}
+          onRemoveOne={onRemoveOne}
+          onRemoveAll={onRemoveAll}
+          viewerRepostCount={viewerRepostCount}
           onQuote={onQuote}
           embeddingDisabled={embeddingDisabled}
         />
@@ -112,11 +115,17 @@ export {RepostButton}
 let RepostButtonDialogInner = ({
   isReposted,
   onRepost,
+  onRemoveOne,
+  onRemoveAll,
+  viewerRepostCount,
   onQuote,
   embeddingDisabled,
 }: {
   isReposted: boolean
   onRepost: () => void
+  onRemoveOne: () => Promise<unknown>
+  onRemoveAll: () => Promise<unknown>
+  viewerRepostCount: number
   onQuote: () => void
   embeddingDisabled: boolean
 }): React.ReactNode => {
@@ -126,12 +135,38 @@ let RepostButtonDialogInner = ({
   const control = Dialog.useDialogContext()
 
   const onPressRepost = useCallback(() => {
-    if (!isReposted) playHaptic()
+    playHaptic()
 
     control.close(() => {
       onRepost()
     })
-  }, [control, isReposted, onRepost, playHaptic])
+  }, [control, onRepost, playHaptic])
+
+  const onPressRemoveOne = useCallback(() => {
+    control.close(() => {
+      void onRemoveOne().catch(error => {
+        Toast.show(
+          error instanceof Error ? error.message : _(msg`Action failed`),
+          {
+            type: 'warning',
+          },
+        )
+      })
+    })
+  }, [_, control, onRemoveOne])
+
+  const onPressRemoveAll = useCallback(() => {
+    control.close(() => {
+      void onRemoveAll().catch(error => {
+        Toast.show(
+          error instanceof Error ? error.message : _(msg`Action failed`),
+          {
+            type: 'warning',
+          },
+        )
+      })
+    })
+  }, [_, control, onRemoveAll])
 
   const onPressQuote = useCallback(() => {
     playHaptic()
@@ -150,7 +185,7 @@ let RepostButtonDialogInner = ({
             style={[a.justify_start, a.px_md, a.gap_sm]}
             label={
               isReposted
-                ? _(msg`Remove repost`)
+                ? _(msg`Repost again`)
                 : _(msg({message: `Repost`, context: 'action'}))
             }
             onPress={onPressRepost}
@@ -160,12 +195,38 @@ let RepostButtonDialogInner = ({
             <RepostIcon size="lg" fill={t.palette.primary_500} />
             <Text style={[a.font_semi_bold, a.text_xl]}>
               {isReposted ? (
-                <Trans>Remove repost</Trans>
+                <Trans>Repost again</Trans>
               ) : (
                 <Trans context="action">Repost</Trans>
               )}
             </Text>
           </Button>
+          {isReposted && (
+            <>
+              <Button
+                style={[a.justify_start, a.px_md]}
+                label={_(msg`Remove one repost`)}
+                onPress={onPressRemoveOne}
+                size="large"
+                variant="ghost"
+                color="primary">
+                <Text style={[a.font_semi_bold, a.text_xl]}>
+                  <Trans>Remove one repost</Trans>
+                </Text>
+              </Button>
+              <Button
+                style={[a.justify_start, a.px_md]}
+                label={_(msg`Remove all reposts`)}
+                onPress={onPressRemoveAll}
+                size="large"
+                variant="ghost"
+                color="primary">
+                <Text style={[a.font_semi_bold, a.text_xl]}>
+                  <Trans>Remove all reposts ({viewerRepostCount})</Trans>
+                </Text>
+              </Button>
+            </>
+          )}
           <Button
             disabled={embeddingDisabled}
             testID="quoteBtn"

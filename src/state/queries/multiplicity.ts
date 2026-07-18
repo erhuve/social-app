@@ -1,5 +1,5 @@
 import {type AppBskyFeedDefs} from '@atproto/api'
-import {useQuery} from '@tanstack/react-query'
+import {type QueryClient, useQuery} from '@tanstack/react-query'
 
 import {STALE} from '#/state/queries'
 import {useSession} from '#/state/session'
@@ -19,19 +19,17 @@ const adapter = MULTIPLICITY_SERVICE_URL
     )
   : undefined
 
-const POST_RQKEY = (viewerDid: string, postUri: string) => [
+export const POST_MULTIPLICITY_RQKEY = (viewerDid: string, postUri: string) => [
   'multiplicity',
   viewerDid,
   'post',
   postUri,
 ]
 
-const ACTOR_RQKEY = (viewerDid: string, actorDid: string) => [
-  'multiplicity',
-  viewerDid,
-  'actor',
-  actorDid,
-]
+export const ACTOR_MULTIPLICITY_RQKEY = (
+  viewerDid: string,
+  actorDid: string,
+) => ['multiplicity', viewerDid, 'actor', actorDid]
 
 export function usePostMultiplicity(
   post: AppBskyFeedDefs.PostView,
@@ -39,7 +37,7 @@ export function usePostMultiplicity(
   const {currentAccount} = useSession()
   const viewerDid = currentAccount?.did ?? ''
   const query = useQuery({
-    queryKey: POST_RQKEY(viewerDid, post.uri),
+    queryKey: POST_MULTIPLICITY_RQKEY(viewerDid, post.uri),
     queryFn: async () => {
       const response = await adapter!.getBatch({
         viewerDid,
@@ -69,7 +67,7 @@ export function useActorMultiplicity(
   const {currentAccount} = useSession()
   const viewerDid = currentAccount?.did ?? ''
   const query = useQuery({
-    queryKey: ACTOR_RQKEY(viewerDid, profile.did),
+    queryKey: ACTOR_MULTIPLICITY_RQKEY(viewerDid, profile.did),
     queryFn: async () => {
       const response = await adapter!.getBatch({
         viewerDid,
@@ -92,5 +90,18 @@ export function useActorMultiplicity(
         profile.viewer?.following,
       ),
     }
+  )
+}
+
+export function updatePostMultiplicity(
+  queryClient: QueryClient,
+  viewerDid: string,
+  postUri: string,
+  fallback: PostMultiplicityState,
+  update: (state: PostMultiplicityState) => PostMultiplicityState,
+) {
+  queryClient.setQueryData<PostMultiplicityState>(
+    POST_MULTIPLICITY_RQKEY(viewerDid, postUri),
+    current => update(current ?? fallback),
   )
 }

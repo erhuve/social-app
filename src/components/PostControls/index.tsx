@@ -25,12 +25,14 @@ import {
   useProgressGuideControls,
 } from '#/state/shell/progress-guide'
 import {atoms as a, useBreakpoints, useTheme} from '#/alf'
+import * as Dialog from '#/components/Dialog'
 import {Reply as Bubble} from '#/components/icons/Reply'
 import {useFormatPostStatCount} from '#/components/PostControls/util'
 import * as Skele from '#/components/Skeleton'
 import * as Toast from '#/components/Toast'
 import {useAnalytics} from '#/analytics'
 import {BookmarkButton} from './BookmarkButton'
+import {MultiplicityRemoveDialog} from './MultiplicityRemoveDialog'
 import {
   PostControlButton,
   PostControlButtonIcon,
@@ -81,18 +83,10 @@ let PostControls = ({
   const multiplicity = usePostMultiplicity(post)
   const likeCount = multiplicity.like.count
   const repostCount = multiplicity.repost.count
-  const [queueLike, queueUnlike] = usePostLikeMutationQueue(
-    post,
-    viaRepost,
-    feedDescriptor,
-    logContext,
-  )
-  const [queueRepost, queueUnrepost] = usePostRepostMutationQueue(
-    post,
-    viaRepost,
-    feedDescriptor,
-    logContext,
-  )
+  const [queueLike, queueUnlike, queueRemoveAllLikes] =
+    usePostLikeMutationQueue(post, viaRepost, feedDescriptor, logContext)
+  const [queueRepost, queueUnrepost, queueRemoveAllReposts] =
+    usePostRepostMutationQueue(post, viaRepost, feedDescriptor, logContext)
   const requireAuth = useRequireAuth()
   const {sendInteraction} = useFeedFeedbackContext()
   const {captureAction} = useProgressGuideControls()
@@ -106,6 +100,9 @@ let PostControls = ({
   const formatPostStatCount = useFormatPostStatCount()
 
   const [hasLikeIconBeenToggled, setHasLikeIconBeenToggled] = useState(false)
+  const likeRemoveDialog = Dialog.useDialogControl()
+  const viewerLikeCount = multiplicity.like.viewerRecordUris.length
+  const viewerRepostCount = multiplicity.repost.viewerRecordUris.length
 
   const onPressToggleLike = async () => {
     if (isBlocked) {
@@ -117,18 +114,14 @@ let PostControls = ({
 
     try {
       setHasLikeIconBeenToggled(true)
-      if (!post.viewer?.like) {
-        sendInteraction({
-          item: post.uri,
-          event: 'app.bsky.feed.defs#interactionLike',
-          feedContext,
-          reqId,
-        })
-        captureAction(ProgressGuideAction.Like)
-        await queueLike()
-      } else {
-        await queueUnlike()
-      }
+      sendInteraction({
+        item: post.uri,
+        event: 'app.bsky.feed.defs#interactionLike',
+        feedContext,
+        reqId,
+      })
+      captureAction(ProgressGuideAction.Like)
+      await queueLike()
     } catch (err) {
       const e = err as Error
       if (e?.name !== 'AbortError') {
@@ -146,17 +139,13 @@ let PostControls = ({
     }
 
     try {
-      if (!post.viewer?.repost) {
-        sendInteraction({
-          item: post.uri,
-          event: 'app.bsky.feed.defs#interactionRepost',
-          feedContext,
-          reqId,
-        })
-        await queueRepost()
-      } else {
-        await queueUnrepost()
-      }
+      sendInteraction({
+        item: post.uri,
+        event: 'app.bsky.feed.defs#interactionRepost',
+        feedContext,
+        reqId,
+      })
+      await queueRepost()
     } catch (err) {
       const e = err as Error
       if (e?.name !== 'AbortError') {
@@ -260,9 +249,12 @@ let PostControls = ({
         </View>
         <View style={[a.flex_1, a.align_start]}>
           <RepostButton
-            isReposted={!!post.viewer?.repost}
+            isReposted={viewerRepostCount > 0}
             repostCount={repostCount + (post.quoteCount ?? 0)}
             onRepost={() => void onRepost()}
+            onRemoveOne={queueUnrepost}
+            onRemoveAll={queueRemoveAllReposts}
+            viewerRepostCount={viewerRepostCount}
             onQuote={onQuote}
             big={big}
             embeddingDisabled={Boolean(post.viewer?.embeddingDisabled)}
@@ -272,13 +264,18 @@ let PostControls = ({
           <PostControlButton
             testID="likeBtn"
             big={big}
-            active={Boolean(post.viewer?.like)}
+            active={viewerLikeCount > 0}
             activeColor={t.palette.pink}
             onPress={() => requireAuth(() => onPressToggleLike())}
+            onLongPress={
+              viewerLikeCount > 0
+                ? () => requireAuth(() => likeRemoveDialog.open())
+                : undefined
+            }
             label={
-              post.viewer?.like
+              viewerLikeCount > 0
                 ? l({
-                    message: `Unlike (${plural(likeCount, {
+                    message: `Like again (${plural(likeCount, {
                       one: '# like',
                       other: '# likes',
                     })})`,
@@ -295,13 +292,13 @@ let PostControls = ({
                   })
             }>
             <AnimatedLikeIcon
-              isLiked={Boolean(post.viewer?.like)}
+              isLiked={viewerLikeCount > 0}
               big={big}
               hasBeenToggled={hasLikeIconBeenToggled}
             />
             <CountWheel
               count={likeCount}
-              isToggled={Boolean(post.viewer?.like)}
+              isToggled={viewerLikeCount > 0}
               hasBeenToggled={hasLikeIconBeenToggled}
               renderCount={({count}) => (
                 <PostControlButtonText testID="likeCount">
@@ -310,6 +307,13 @@ let PostControls = ({
               )}
             />
           </PostControlButton>
+          <MultiplicityRemoveDialog
+            control={likeRemoveDialog}
+            actionLabel={l`Remove likes`}
+            ownedCount={viewerLikeCount}
+            onRemoveOne={queueUnlike}
+            onRemoveAll={queueRemoveAllLikes}
+          />
         </View>
         {/* Spacer! */}
         <View />
