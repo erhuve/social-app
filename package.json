@@ -303,6 +303,11 @@
   },
   "jest": {
     "preset": "jest-expo/ios",
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "/__rsc_tests__/",
+      "<rootDir>/dev-env/"
+    ],
     "setupFilesAfterEnv": [
       "./jest/jestSetup.js"
     ],
