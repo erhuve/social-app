@@ -4,7 +4,7 @@ import {
   DEFAULT_SUBDUED_PALETTE,
 } from '@bsky.app/alf'
 
-const DEFAULT_THEMES = createThemes({
+const BASE_THEMES = createThemes({
   defaultPalette: {
     ...DEFAULT_PALETTE,
     pink: '#C95B4A',
@@ -24,6 +24,7 @@ const DEFAULT_THEMES = createThemes({
     contrast_900: '#252C25',
     contrast_950: '#1B221C',
     contrast_975: '#141A15',
+    contrast_1000: '#0D130F',
     primary_25: '#F5F8F1',
     primary_50: '#E8EFE2',
     primary_100: '#D0DFC7',
@@ -43,6 +44,21 @@ const DEFAULT_THEMES = createThemes({
     pink: '#C95B4A',
     like: '#C95B4A',
     yellow: '#D6A62E',
+    contrast_0: '#FFFEFA',
+    contrast_25: '#F8F6EF',
+    contrast_50: '#EFEEE7',
+    contrast_100: '#E0DED5',
+    contrast_200: '#C5C2B7',
+    contrast_300: '#A7A59A',
+    contrast_400: '#8A8D82',
+    contrast_500: '#6D7469',
+    contrast_600: '#586157',
+    contrast_700: '#465046',
+    contrast_800: '#354039',
+    contrast_900: '#3A463E',
+    contrast_950: '#303B34',
+    contrast_975: '#263029',
+    contrast_1000: '#1B251F',
     primary_25: '#F5F8F1',
     primary_50: '#EAF0E5',
     primary_100: '#D5E1CE',
@@ -58,6 +74,26 @@ const DEFAULT_THEMES = createThemes({
     primary_975: '#121C15',
   },
 })
+
+const DARK_PRIMARY_FOREGROUND = '#739A6A'
+
+const DEFAULT_THEMES = {
+  ...BASE_THEMES,
+  dark: {
+    ...BASE_THEMES.dark,
+    palette: {
+      ...BASE_THEMES.dark.palette,
+      primary_500: DARK_PRIMARY_FOREGROUND,
+    },
+  },
+  dim: {
+    ...BASE_THEMES.dim,
+    palette: {
+      ...BASE_THEMES.dim.palette,
+      primary_500: DARK_PRIMARY_FOREGROUND,
+    },
+  },
+}
 
 export const themes = {
   lightPalette: DEFAULT_THEMES.light.palette,
