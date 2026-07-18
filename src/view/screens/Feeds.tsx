@@ -17,10 +17,12 @@ import {cleanError} from '#/lib/strings/errors'
 import {s} from '#/lib/styles'
 import {
   type SavedFeedItem,
+  useConfiguredMultiplicityFeedQuery,
   useGetPopularFeedsQuery,
   useSavedFeeds,
   useSearchPopularFeedsMutation,
 } from '#/state/queries/feed'
+import {usePreferencesQuery} from '#/state/queries/preferences'
 import {useSession} from '#/state/session'
 import {ErrorMessage} from '#/view/com/util/error/ErrorMessage'
 import {FAB} from '#/view/com/util/fab/FAB'
@@ -133,6 +135,11 @@ export function FeedsScreen(_props: Props) {
     error: searchError,
   } = useSearchPopularFeedsMutation()
   const {hasSession} = useSession()
+  const {data: preferences, isLoading: isPreferencesLoading} =
+    usePreferencesQuery()
+  const {data: configuredMultiplicityFeed} = useConfiguredMultiplicityFeedQuery(
+    {enabled: hasSession},
+  )
   const listRef = useRef<ListMethods>(null)
 
   /**
@@ -296,6 +303,23 @@ export function FeedsScreen(_props: Props) {
           ),
         })
       } else {
+        const configuredFeedIsSaved = preferences?.savedFeeds.some(
+          feed => feed.value === configuredMultiplicityFeed?.uri,
+        )
+        if (
+          !isUserSearching &&
+          !isPreferencesLoading &&
+          configuredMultiplicityFeed &&
+          !configuredFeedIsSaved
+        ) {
+          slices.push({
+            key: `popularFeed:${configuredMultiplicityFeed.uri}`,
+            type: 'popularFeed',
+            feedUri: configuredMultiplicityFeed.uri,
+            feed: configuredMultiplicityFeed,
+          })
+        }
+
         if (isUserSearching) {
           if (isSearchPending || !searchResults) {
             slices.push({
@@ -334,12 +358,16 @@ export function FeedsScreen(_props: Props) {
             } else {
               for (const page of popularFeeds.pages || []) {
                 slices = slices.concat(
-                  page.feeds.map(feed => ({
-                    key: `popularFeed:${feed.uri}`,
-                    type: 'popularFeed',
-                    feedUri: feed.uri,
-                    feed,
-                  })),
+                  page.feeds
+                    .filter(
+                      feed => feed.uri !== configuredMultiplicityFeed?.uri,
+                    )
+                    .map(feed => ({
+                      key: `popularFeed:${feed.uri}`,
+                      type: 'popularFeed',
+                      feedUri: feed.uri,
+                      feed,
+                    })),
                 )
               }
 
@@ -369,6 +397,9 @@ export function FeedsScreen(_props: Props) {
     isSearchPending,
     searchError,
     isUserSearching,
+    configuredMultiplicityFeed,
+    preferences?.savedFeeds,
+    isPreferencesLoading,
   ])
 
   const searchBarIndex = items.findIndex(

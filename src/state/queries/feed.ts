@@ -27,6 +27,8 @@ import {RQKEY as listQueryKey} from '#/state/queries/list'
 import {usePreferencesQuery} from '#/state/queries/preferences'
 import {createQueryKey} from '#/state/queries/util'
 import {useAgent, useSession} from '#/state/session'
+import {MULTIPLICITY_FEED_URI} from '#/env'
+import {parseMultiplicityFeedUri} from '#/multiplicity/feed-config'
 import {router} from '#/routes'
 import {useModerationOpts} from '../preferences/moderation-opts'
 import {type FeedDescriptor} from './post-feed'
@@ -208,12 +210,53 @@ export function useFeedSourceInfoQuery({uri}: {uri: string}) {
   })
 }
 
+const configuredMultiplicityFeedUri = parseMultiplicityFeedUri(
+  MULTIPLICITY_FEED_URI,
+)
+
+export function useConfiguredMultiplicityFeedQuery({
+  enabled,
+}: {
+  enabled: boolean
+}) {
+  const agent = useAgent()
+  const {currentAccount} = useSession()
+  const moderationOpts = useModerationOpts()
+
+  return useQuery({
+    enabled:
+      enabled &&
+      Boolean(currentAccount?.did) &&
+      Boolean(moderationOpts) &&
+      Boolean(configuredMultiplicityFeedUri),
+    queryKey: [
+      'configuredMultiplicityFeed',
+      currentAccount?.did,
+      configuredMultiplicityFeedUri,
+    ],
+    queryFn: async () => {
+      const res = await agent.app.bsky.feed.getFeedGenerator({
+        feed: configuredMultiplicityFeedUri!,
+      })
+      return res.data.view
+    },
+    retry: false,
+    select: feed => {
+      if (!moderationOpts) return undefined
+      const decision = moderateFeedGenerator(feed, moderationOpts)
+      return decision.ui('contentMedia').blur ? undefined : feed
+    },
+    staleTime: STALE.INFINITY,
+  })
+}
+
 // HACK
 // the protocol doesn't yet tell us which feeds are personalized
 // this list is used to filter out feed recommendations from logged out users
 // for the ones we know need it
 // -prf
 export const KNOWN_AUTHED_ONLY_FEEDS = [
+  ...(configuredMultiplicityFeedUri ? [configuredMultiplicityFeedUri] : []),
   'at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator/with-friends', // popular with friends, by bsky.app
   'at://did:plc:tenurhgjptubkk5zf5qhi3og/app.bsky.feed.generator/mutuals', // mutuals, by skyfeed
   'at://did:plc:tenurhgjptubkk5zf5qhi3og/app.bsky.feed.generator/only-posts', // only posts, by skyfeed

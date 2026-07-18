@@ -117,6 +117,8 @@ export const MULTIPLICITY_SERVICE_URL: string | undefined =
   process.env.EXPO_PUBLIC_MULTIPLICITY_SERVICE_URL
 export const MULTIPLICITY_SERVICE_DID: string | undefined =
   process.env.EXPO_PUBLIC_MULTIPLICITY_SERVICE_DID
+export const MULTIPLICITY_FEED_URI: string | undefined =
+  process.env.EXPO_PUBLIC_MULTIPLICITY_FEED_URI
 
 /**
  * GCP project ID which is required for native device attestation. On web, this
