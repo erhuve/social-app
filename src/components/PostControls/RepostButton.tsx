@@ -14,6 +14,7 @@ import {Repost_Stroke2_Corner3_Rounded as RepostIcon} from '#/components/icons/R
 import {useFormatPostStatCount} from '#/components/PostControls/util'
 import * as Toast from '#/components/Toast'
 import {Text} from '#/components/Typography'
+import {MultiplicityBloom} from './MultiplicityBloom'
 import {
   PostControlButton,
   PostControlButtonIcon,
@@ -73,31 +74,48 @@ let RepostButton = ({
             onLongPress()
           }
         }}
-        accessibilityHint={_(
-          msg`Adds another repost. Use accessibility actions for quote and removal options.`,
-        )}
+        accessibilityHint={
+          viewerRepostCount > 1
+            ? _(
+                msg`You have reposted this post multiple times. Adds another repost. Use accessibility actions for quote and removal options.`,
+              )
+            : _(
+                msg`Adds another repost. Use accessibility actions for quote and removal options.`,
+              )
+        }
         label={
-          isReposted
+          viewerRepostCount > 1
             ? _(
                 msg({
                   message: `Repost again (${plural(repostCount || 0, {
                     one: '# repost',
                     other: '# reposts',
-                  })})`,
+                  })}). You reposted this post ${viewerRepostCount} times.`,
                   comment:
-                    'Accessibility label for adding another repost, verb followed by number of reposts and noun',
+                    'Accessibility label for adding another repost when the viewer has reposted multiple times, including total and viewer-owned repost counts',
                 }),
               )
-            : _(
-                msg({
-                  message: `Repost (${plural(repostCount || 0, {
-                    one: '# repost',
-                    other: '# reposts',
-                  })})`,
-                  comment:
-                    'Accessibility label for the repost button when the post has not been reposted, verb form followed by number of reposts and noun form',
-                }),
-              )
+            : isReposted
+              ? _(
+                  msg({
+                    message: `Repost again (${plural(repostCount || 0, {
+                      one: '# repost',
+                      other: '# reposts',
+                    })})`,
+                    comment:
+                      'Accessibility label for adding another repost, verb followed by number of reposts and noun',
+                  }),
+                )
+              : _(
+                  msg({
+                    message: `Repost (${plural(repostCount || 0, {
+                      one: '# repost',
+                      other: '# reposts',
+                    })})`,
+                    comment:
+                      'Accessibility label for the repost button when the post has not been reposted, verb form followed by number of reposts and noun form',
+                  }),
+                )
         }>
         <PostControlButtonIcon icon={RepostIcon} />
         {typeof repostCount !== 'undefined' && repostCount > 0 && (
@@ -105,6 +123,10 @@ let RepostButton = ({
             {formatPostStatCount(repostCount)}
           </PostControlButtonText>
         )}
+        <MultiplicityBloom
+          count={viewerRepostCount}
+          color={t.palette.positive_500}
+        />
       </PostControlButton>
       <Dialog.Outer
         control={dialogControl}

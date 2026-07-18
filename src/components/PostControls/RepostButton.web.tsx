@@ -8,6 +8,7 @@ import {CloseQuote_Stroke2_Corner1_Rounded as Quote} from '#/components/icons/Qu
 import {Repost_Stroke2_Corner2_Rounded as Repost} from '#/components/icons/Repost'
 import * as Menu from '#/components/Menu'
 import * as Toast from '#/components/Toast'
+import {MultiplicityBloom} from './MultiplicityBloom'
 import {
   PostControlButton,
   PostControlButtonIcon,
@@ -64,7 +65,13 @@ export const RepostButton = ({
                 testID="repostBtn"
                 active={isReposted}
                 activeColor={t.palette.positive_500}
-                label={props.accessibilityLabel}
+                label={
+                  viewerRepostCount > 1
+                    ? _(
+                        msg`Repost or quote post. You have reposted this post ${viewerRepostCount} times.`,
+                      )
+                    : props.accessibilityLabel
+                }
                 big={big}
                 {...props}>
                 <PostControlButtonIcon icon={Repost} />
@@ -73,6 +80,10 @@ export const RepostButton = ({
                     {formatPostStatCount(repostCount)}
                   </PostControlButtonText>
                 )}
+                <MultiplicityBloom
+                  count={viewerRepostCount}
+                  color={t.palette.positive_500}
+                />
               </PostControlButton>
             )
           }}

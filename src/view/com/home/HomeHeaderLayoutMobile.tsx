@@ -13,13 +13,12 @@ import {emitSoftReset} from '#/state/events'
 import {useSession} from '#/state/session'
 import {useShellLayout} from '#/state/shell/shell-layout'
 import {useHomeHeaderTransform} from '#/view/com/util/MainScrollProvider'
-import {Logo} from '#/view/icons/Logo'
-import {useLogoVariant} from '#/view/icons/useLogoVariant'
 import {atoms as a, useTheme} from '#/alf'
 import {ButtonIcon} from '#/components/Button'
 import {Hashtag_Stroke2_Corner0_Rounded as FeedsIcon} from '#/components/icons/Hashtag'
 import * as Layout from '#/components/Layout'
 import {Link} from '#/components/Link'
+import {MeadowMark} from '#/components/Meadow/Brand'
 import {useAnalytics} from '#/analytics'
 import {IS_DEV, IS_LIQUID_GLASS} from '#/env'
 
@@ -38,7 +37,6 @@ export function HomeHeaderLayoutMobile({
   const {hasSession} = useSession()
   const playHaptic = useHaptics()
   const {navigate} = useNavigation<NavigationProp>()
-  const logoVariant = useLogoVariant()
 
   return (
     <Animated.View
@@ -64,6 +62,9 @@ export function HomeHeaderLayoutMobile({
 
         <View style={[a.flex_1, a.align_center]}>
           <PressableScale
+            accessibilityRole="button"
+            accessibilityLabel={_(msg`MEADOW home`)}
+            accessibilityHint={_(msg`Returns to the top of your home feed`)}
             targetScale={0.9}
             onPress={() => {
               if (IS_DEV) {
@@ -73,7 +74,7 @@ export function HomeHeaderLayoutMobile({
                 emitSoftReset()
               }
             }}>
-            <Logo width={logoVariant === 'japan' ? 34 : 30} />
+            <MeadowMark width={30} />
           </PressableScale>
         </View>
 

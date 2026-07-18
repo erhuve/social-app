@@ -10,7 +10,7 @@ import {useTrendingConfig} from '#/state/service-config'
 import {atoms as a, useTheme} from '#/alf'
 import {Button, ButtonIcon} from '#/components/Button'
 import {DotGrid3x1_Stroke2_Corner0_Rounded as Ellipsis} from '#/components/icons/DotGrid'
-import {Trending3_Stroke2_Corner1_Rounded as TrendingIcon} from '#/components/icons/Trending'
+import {MeadowMark} from '#/components/Meadow/Brand'
 import * as Prompt from '#/components/Prompt'
 import {TrendingTopicLink} from '#/components/TrendingTopics'
 import {Text} from '#/components/Typography'
@@ -43,9 +43,9 @@ function Inner() {
       <View
         style={[a.p_lg, a.rounded_md, a.border, t.atoms.border_contrast_low]}>
         <View style={[a.flex_row, a.align_center, a.gap_xs, a.pb_md]}>
-          <TrendingIcon width={16} height={16} fill={t.atoms.text.color} />
+          <MeadowMark width={16} fill={t.atoms.text.color} />
           <Text style={[a.flex_1, a.text_md, a.font_semi_bold, t.atoms.text]}>
-            <Trans>Trending</Trans>
+            <Trans>What's growing</Trans>
           </Text>
           <Button
             variant="ghost"

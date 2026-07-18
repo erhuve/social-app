@@ -32,6 +32,7 @@ import * as Skele from '#/components/Skeleton'
 import * as Toast from '#/components/Toast'
 import {useAnalytics} from '#/analytics'
 import {BookmarkButton} from './BookmarkButton'
+import {MultiplicityBloom} from './MultiplicityBloom'
 import {MultiplicityRemoveDialog} from './MultiplicityRemoveDialog'
 import {
   PostControlButton,
@@ -283,28 +284,39 @@ let PostControls = ({
               }
             }}
             accessibilityHint={
-              viewerLikeCount > 0
-                ? l`Adds another like. Use accessibility actions to remove likes.`
-                : undefined
+              viewerLikeCount > 1
+                ? l`You have liked this post ${viewerLikeCount} times. Adds another like. Use accessibility actions to remove likes.`
+                : viewerLikeCount > 0
+                  ? l`Adds another like. Use accessibility actions to remove likes.`
+                  : undefined
             }
             label={
-              viewerLikeCount > 0
+              viewerLikeCount > 1
                 ? l({
                     message: `Like again (${plural(likeCount, {
                       one: '# like',
                       other: '# likes',
-                    })})`,
+                    })}). You liked this post ${viewerLikeCount} times.`,
                     comment:
-                      'Accessibility label for the like button when the post has been liked, verb followed by number of likes and noun',
+                      'Accessibility label for the like button when the viewer has liked the post multiple times, including total and viewer-owned like counts',
                   })
-                : l({
-                    message: `Like (${plural(likeCount, {
-                      one: '# like',
-                      other: '# likes',
-                    })})`,
-                    comment:
-                      'Accessibility label for the like button when the post has not been liked, verb form followed by number of likes and noun form',
-                  })
+                : viewerLikeCount > 0
+                  ? l({
+                      message: `Like again (${plural(likeCount, {
+                        one: '# like',
+                        other: '# likes',
+                      })})`,
+                      comment:
+                        'Accessibility label for the like button when the post has been liked, verb followed by number of likes and noun',
+                    })
+                  : l({
+                      message: `Like (${plural(likeCount, {
+                        one: '# like',
+                        other: '# likes',
+                      })})`,
+                      comment:
+                        'Accessibility label for the like button when the post has not been liked, verb form followed by number of likes and noun form',
+                    })
             }>
             <AnimatedLikeIcon
               isLiked={viewerLikeCount > 0}
@@ -321,6 +333,7 @@ let PostControls = ({
                 </PostControlButtonText>
               )}
             />
+            <MultiplicityBloom count={viewerLikeCount} color={t.palette.pink} />
           </PostControlButton>
           <MultiplicityRemoveDialog
             control={likeRemoveDialog}

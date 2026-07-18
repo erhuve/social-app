@@ -79,6 +79,7 @@ import {
   UserCircle_Stroke2_Corner0_Rounded as UserCircleIcon,
 } from '#/components/icons/UserCircle'
 import {CENTER_COLUMN_OFFSET, CENTER_COLUMN_WIDTH} from '#/components/Layout'
+import {MeadowBrand} from '#/components/Meadow/Brand'
 import * as Menu from '#/components/Menu'
 import * as Prompt from '#/components/Prompt'
 import {Text} from '#/components/Typography'
@@ -630,6 +631,7 @@ export function DesktopLeftNav({routeName}: {routeName: string}) {
       style={[
         a.fixed,
         a.top_0,
+        a.h_full,
         a.p_lg,
         styles.leftNav,
         !hasSession && !leftNavMinimal && {width: LEFT_NAV_PWI_WIDTH},
@@ -654,9 +656,16 @@ export function DesktopLeftNav({routeName}: {routeName: string}) {
           ],
         },
       ]}>
-      {hasSession ? (
-        <ProfileCard minimal={leftNavMinimal} />
-      ) : !leftNavMinimal ? (
+      {hasSession && (
+        <View
+          style={[
+            a.pb_lg,
+            leftNavMinimal ? a.align_center : [a.pl_lg, a.align_start],
+          ]}>
+          <MeadowBrand compact={leftNavMinimal} />
+        </View>
+      )}
+      {!hasSession && !leftNavMinimal ? (
         <View style={[a.pt_xl]}>
           <NavSignupCard />
         </View>
@@ -763,6 +772,8 @@ export function DesktopLeftNav({routeName}: {routeName: string}) {
           />
 
           <ComposeBtn minimal={leftNavMinimal} />
+          <View style={a.flex_1} />
+          <ProfileCard minimal={leftNavMinimal} />
         </>
       )}
     </View>
