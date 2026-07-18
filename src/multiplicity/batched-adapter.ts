@@ -12,6 +12,7 @@ type PendingRequest = {
 }
 
 const MAX_SUBJECTS_PER_REQUEST = 100
+const MAX_CONCURRENT_CHUNKS = 2
 
 export function createBatchedMultiplicityAdapter(
   adapter: MultiplicityAdapter,
@@ -19,6 +20,33 @@ export function createBatchedMultiplicityAdapter(
 ): MultiplicityAdapter {
   let pending: PendingRequest[] = []
   let scheduled = false
+  let activeChunks = 0
+  const chunkWaiters: Array<() => void> = []
+
+  async function acquireChunkSlot(): Promise<void> {
+    if (activeChunks < MAX_CONCURRENT_CHUNKS) {
+      activeChunks += 1
+      return
+    }
+    await new Promise<void>(resolve => chunkWaiters.push(resolve))
+  }
+
+  function releaseChunkSlot(): void {
+    const next = chunkWaiters.shift()
+    if (next) next()
+    else activeChunks -= 1
+  }
+
+  async function runChunk(
+    request: MultiplicityBatchRequest,
+  ): Promise<MultiplicityBatchResponse> {
+    await acquireChunkSlot()
+    try {
+      return await adapter.getBatch(request)
+    } finally {
+      releaseChunkSlot()
+    }
+  }
 
   async function flush() {
     const requests = pending
@@ -45,21 +73,35 @@ export function createBatchedMultiplicityAdapter(
             Math.ceil(postUris.length / MAX_SUBJECTS_PER_REQUEST),
             Math.ceil(actorDids.length / MAX_SUBJECTS_PER_REQUEST),
           )
-          const chunks = await Promise.all(
-            Array.from({length: chunkCount}, (_, index) =>
-              adapter.getBatch({
-                viewerDid,
-                postUris: postUris.slice(
-                  index * MAX_SUBJECTS_PER_REQUEST,
-                  (index + 1) * MAX_SUBJECTS_PER_REQUEST,
-                ),
-                actorDids: actorDids.slice(
-                  index * MAX_SUBJECTS_PER_REQUEST,
-                  (index + 1) * MAX_SUBJECTS_PER_REQUEST,
-                ),
-              }),
-            ),
-          )
+          const chunks: MultiplicityBatchResponse[] = []
+          for (
+            let start = 0;
+            start < chunkCount;
+            start += MAX_CONCURRENT_CHUNKS
+          ) {
+            const batch = await Promise.all(
+              Array.from(
+                {
+                  length: Math.min(MAX_CONCURRENT_CHUNKS, chunkCount - start),
+                },
+                (_, offset) => {
+                  const index = start + offset
+                  return runChunk({
+                    viewerDid,
+                    postUris: postUris.slice(
+                      index * MAX_SUBJECTS_PER_REQUEST,
+                      (index + 1) * MAX_SUBJECTS_PER_REQUEST,
+                    ),
+                    actorDids: actorDids.slice(
+                      index * MAX_SUBJECTS_PER_REQUEST,
+                      (index + 1) * MAX_SUBJECTS_PER_REQUEST,
+                    ),
+                  })
+                },
+              ),
+            )
+            chunks.push(...batch)
+          }
           const response: MultiplicityBatchResponse = {
             posts: Object.assign({}, ...chunks.map(chunk => chunk.posts)),
             actors: Object.assign({}, ...chunks.map(chunk => chunk.actors)),

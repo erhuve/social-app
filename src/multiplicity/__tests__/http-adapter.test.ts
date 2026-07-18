@@ -71,6 +71,44 @@ describe('createHttpMultiplicityAdapter', () => {
     ).rejects.toThrow('status 503')
   })
 
+  it('mints a fresh service token and sends it as bearer auth', async () => {
+    const getServiceAuthToken = jest.fn(() => Promise.resolve('signed-token'))
+    const fetch = jest.fn(() =>
+      Promise.resolve(Response.json({posts: {}, actors: {}})),
+    )
+    const adapter = createHttpMultiplicityAdapter({
+      baseUrl: 'https://multiplicity.example',
+      fetch,
+      getServiceAuthToken,
+    })
+
+    await adapter.getBatch({viewerDid: VIEWER_DID, postUris: [], actorDids: []})
+
+    expect(getServiceAuthToken).toHaveBeenCalledTimes(1)
+    expect(fetch).toHaveBeenCalledWith(
+      'https://multiplicity.example/v1/multiplicity/batch',
+      expect.objectContaining({
+        headers: {
+          Accept: 'application/json',
+          Authorization: 'Bearer signed-token',
+          'Content-Type': 'application/json',
+        },
+      }),
+    )
+  })
+
+  it('never sends service auth tokens over plaintext HTTP', () => {
+    const getServiceAuthToken = jest.fn(() => Promise.resolve('signed-token'))
+
+    expect(() =>
+      createHttpMultiplicityAdapter({
+        baseUrl: 'http://multiplicity.example',
+        getServiceAuthToken,
+      }),
+    ).toThrow('require HTTPS')
+    expect(getServiceAuthToken).not.toHaveBeenCalled()
+  })
+
   it.each([
     {
       name: 'negative counts',

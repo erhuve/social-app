@@ -1,26 +1,59 @@
-import {type AppBskyFeedDefs} from '@atproto/api'
+import {type AppBskyFeedDefs, type AtpAgent} from '@atproto/api'
 import {type QueryClient, useQuery} from '@tanstack/react-query'
 
+import {getServiceAuthAudFromUrl} from '#/lib/strings/url-helpers'
 import {STALE} from '#/state/queries'
-import {useSession} from '#/state/session'
-import {MULTIPLICITY_SERVICE_URL} from '#/env'
+import {useAgent, useSession} from '#/state/session'
+import {MULTIPLICITY_SERVICE_DID, MULTIPLICITY_SERVICE_URL} from '#/env'
 import {
   type ActorMultiplicityState,
   applyMultiplicityOverlay,
   createBatchedMultiplicityAdapter,
   createFallbackAction,
   createHttpMultiplicityAdapter,
+  MULTIPLICITY_BATCH_LXM,
+  type MultiplicityAdapter,
   multiplicityReconciliationKey,
   type PostMultiplicityState,
   reconcileMultiplicityAction,
 } from '#/multiplicity'
 import type * as bsky from '#/types/bsky'
 
-const adapter = MULTIPLICITY_SERVICE_URL
-  ? createBatchedMultiplicityAdapter(
-      createHttpMultiplicityAdapter({baseUrl: MULTIPLICITY_SERVICE_URL}),
-    )
-  : undefined
+const serviceAuthAudience = MULTIPLICITY_SERVICE_URL
+  ? (MULTIPLICITY_SERVICE_DID ??
+    getServiceAuthAudFromUrl(MULTIPLICITY_SERVICE_URL))
+  : null
+const adapters = new WeakMap<AtpAgent, MultiplicityAdapter>()
+
+function getMultiplicityAdapter(
+  agent: AtpAgent,
+  viewerDid: string,
+): MultiplicityAdapter | undefined {
+  if (
+    !MULTIPLICITY_SERVICE_URL ||
+    !serviceAuthAudience ||
+    !viewerDid.startsWith('did:plc:')
+  ) {
+    return undefined
+  }
+  const existing = adapters.get(agent)
+  if (existing) return existing
+
+  const adapter = createBatchedMultiplicityAdapter(
+    createHttpMultiplicityAdapter({
+      baseUrl: MULTIPLICITY_SERVICE_URL,
+      getServiceAuthToken: async () => {
+        const {data} = await agent.com.atproto.server.getServiceAuth({
+          aud: serviceAuthAudience,
+          lxm: MULTIPLICITY_BATCH_LXM,
+        })
+        return data.token
+      },
+    }),
+  )
+  adapters.set(agent, adapter)
+  return adapter
+}
 
 export const POST_MULTIPLICITY_RQKEY = (viewerDid: string, postUri: string) => [
   'multiplicity',
@@ -37,8 +70,10 @@ export const ACTOR_MULTIPLICITY_RQKEY = (
 export function usePostMultiplicity(
   post: AppBskyFeedDefs.PostView,
 ): PostMultiplicityState {
+  const agent = useAgent()
   const {currentAccount} = useSession()
   const viewerDid = currentAccount?.did ?? ''
+  const adapter = getMultiplicityAdapter(agent, viewerDid)
   const fallback = {
     like: createFallbackAction(post.likeCount, post.viewer?.like),
     repost: createFallbackAction(post.repostCount, post.viewer?.repost),
@@ -90,8 +125,10 @@ export function usePostMultiplicity(
 export function useActorMultiplicity(
   profile: bsky.profile.AnyProfileView,
 ): ActorMultiplicityState {
+  const agent = useAgent()
   const {currentAccount} = useSession()
   const viewerDid = currentAccount?.did ?? ''
+  const adapter = getMultiplicityAdapter(agent, viewerDid)
   const fallback = {
     follow: createFallbackAction(
       profile.viewer?.following ? 1 : 0,
