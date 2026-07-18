@@ -8,15 +8,18 @@ import {logger} from '#/logger'
 import {useProfileShadow} from '#/state/cache/profile-shadow'
 import {useModerationOpts} from '#/state/preferences/moderation-opts'
 import {useRemoveFromGroupChat} from '#/state/queries/messages/remove-from-group'
+import {useActorMultiplicity} from '#/state/queries/multiplicity'
 import {useProfileFollowMutationQueue} from '#/state/queries/profile'
 import {useRequireAuth, useSession} from '#/state/session'
 import {atoms as a, native, useTheme, web} from '#/alf'
 import {Button, ButtonText} from '#/components/Button'
+import * as Dialog from '#/components/Dialog'
 import {
   type ConvoWithDetails,
   type GroupConvoMember,
 } from '#/components/dms/util'
 import {createStaticClick, SimpleInlineLinkText} from '#/components/Link'
+import {MultiplicityRemoveDialog} from '#/components/PostControls/MultiplicityRemoveDialog'
 import * as ProfileCard from '#/components/ProfileCard'
 import * as Prompt from '#/components/Prompt'
 import * as Toast from '#/components/Toast'
@@ -46,8 +49,11 @@ export function Member({
   const {currentAccount} = useSession()
   const moderationOpts = useModerationOpts()
 
-  const [queueFollow] = useProfileFollowMutationQueue(profile, 'GroupChat')
+  const [queueFollow, queueUnfollow, queueUnfollowAll] =
+    useProfileFollowMutationQueue(profile, 'GroupChat')
+  const multiplicity = useActorMultiplicity(profile)
   const requireAuth = useRequireAuth()
+  const removeFollowControl = Dialog.useDialogControl()
 
   const removeMemberPrompt = Prompt.usePromptControl()
   const {mutate: removeMembers} = useRemoveFromGroupChat(convo.view.id, {
@@ -57,7 +63,8 @@ export function Member({
     },
   })
 
-  const isFollowing = !!profile.viewer?.following
+  const viewerFollowCount = multiplicity.follow.viewerRecordUris.length
+  const isFollowing = viewerFollowCount > 0
 
   const handleFollow = () => {
     requireAuth(async () => {
@@ -162,15 +169,47 @@ export function Member({
               <Trans>Remove</Trans>
             </ButtonText>
           </Button>
-        ) : isSelf || isFollowing || isBlockedOrBlocking(profile) ? null : (
+        ) : isSelf || isBlockedOrBlocking(profile) ? null : (
           <SimpleInlineLinkText
-            label={l`Follow ${displayName}`}
+            label={
+              isFollowing
+                ? l`Follow ${displayName} again`
+                : l`Follow ${displayName}`
+            }
+            accessibilityHint={
+              isFollowing
+                ? l`Adds another follow. Use the manage follows action to remove follows.`
+                : undefined
+            }
             {...createStaticClick(handleFollow)}
             style={[a.font_medium]}>
-            <Trans>Follow</Trans>
+            {multiplicity.follow.viewerRecordUris.length > 1 ? (
+              <Trans>
+                Following ×{multiplicity.follow.viewerRecordUris.length}
+              </Trans>
+            ) : isFollowing ? (
+              <Trans>Follow again</Trans>
+            ) : (
+              <Trans>Follow</Trans>
+            )}
+          </SimpleInlineLinkText>
+        )}
+        {isFollowing && !isSelf && !isBlockedOrBlocking(profile) && (
+          <SimpleInlineLinkText
+            label={l`Manage follows for ${displayName}`}
+            {...createStaticClick(() => removeFollowControl.open())}
+            style={[a.font_medium]}>
+            <Trans>Manage follows</Trans>
           </SimpleInlineLinkText>
         )}
         {statusBadge}
+        <MultiplicityRemoveDialog
+          control={removeFollowControl}
+          actionLabel={l`Remove follows`}
+          ownedCount={viewerFollowCount}
+          onRemoveOne={queueUnfollow}
+          onRemoveAll={queueUnfollowAll}
+        />
       </View>
       {/* Mounted outside the showRemoveButton conditional: confirming the
           prompt optimistically drops this row, so gating the prompt on the

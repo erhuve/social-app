@@ -16,15 +16,22 @@ import {useAnalytics} from '#/analytics'
 import {type Metrics, toClout} from '#/analytics/metrics'
 import {
   addPendingRecord,
+  commitMultiplicityRemoval,
+  confirmMultiplicityAddition,
   confirmPendingRecord,
   createFallbackAction,
   createMultiplicityLike,
   createMultiplicityRepost,
   enqueueSubjectMutation,
+  markMultiplicityAddition,
+  markMultiplicityRemoval,
   type MultiplicityActionState,
+  multiplicityReconciliationKey,
   type PostMultiplicityState,
   removeRecords,
   restoreRecords,
+  rollbackMultiplicityAddition,
+  rollbackMultiplicityRemoval,
 } from '#/multiplicity'
 import {useIsThreadMuted, useSetThreadMute} from '../cache/thread-mutes'
 import {POST_MULTIPLICITY_RQKEY, updatePostMultiplicity} from './multiplicity'
@@ -147,7 +154,14 @@ export function usePostLikeMutationQueue(
     deleteRecord: uri =>
       unlikeMutation.mutateAsync({postUri: post.uri, likeUri: uri}),
     onCreate: () => userActionHistory.like([post.uri]),
-    onDelete: () => userActionHistory.unlike([post.uri]),
+    onDelete: (removedCount, remainingCount) => {
+      if (remainingCount === 0) userActionHistory.unlike([post.uri])
+      else {
+        for (let index = 0; index < removedCount; index++) {
+          userActionHistory.unlikeOne(post.uri)
+        }
+      }
+    },
   })
 }
 
@@ -257,12 +271,18 @@ function usePostMultiplicityMutationQueue({
   createRecord: () => Promise<{uri: string}>
   deleteRecord: (uri: string) => Promise<unknown>
   onCreate?: () => void
-  onDelete?: () => void
+  onDelete?: (removedCount: number, remainingCount: number) => void
 }) {
   const queryClient = useQueryClient()
   const {currentAccount} = useSession()
   const viewerDid = currentAccount?.did ?? ''
-  const subjectKey = `${action}:${post.uri}`
+  const subjectKey = `${viewerDid}:${action}:${post.uri}`
+  const reconciliationKey = multiplicityReconciliationKey(
+    viewerDid,
+    'post',
+    post.uri,
+    action,
+  )
   const fallback: PostMultiplicityState = useMemo(
     () => ({
       like: createFallbackAction(post.likeCount, post.viewer?.like),
@@ -271,17 +291,34 @@ function usePostMultiplicityMutationQueue({
     [post.likeCount, post.repostCount, post.viewer?.like, post.viewer?.repost],
   )
 
+  const syncBinaryActionState = useCallback(
+    (state: MultiplicityActionState) => {
+      const recordUri = state.viewerRecordUris[0]
+      updatePostShadow(
+        queryClient,
+        post.uri,
+        action === 'like' ? {likeUri: recordUri} : {repostUri: recordUri},
+      )
+    },
+    [action, post.uri, queryClient],
+  )
+
   const updateAction = useCallback(
     (update: (state: MultiplicityActionState) => MultiplicityActionState) => {
+      let next = fallback[action]
       updatePostMultiplicity(
         queryClient,
         viewerDid,
         post.uri,
         fallback,
-        state => ({...state, [action]: update(state[action])}),
+        state => {
+          next = update(state[action])
+          return {...state, [action]: next}
+        },
       )
+      syncBinaryActionState(next)
     },
-    [action, fallback, post.uri, queryClient, viewerDid],
+    [action, fallback, post.uri, queryClient, syncBinaryActionState, viewerDid],
   )
 
   const getAction = useCallback(() => {
@@ -293,19 +330,29 @@ function usePostMultiplicityMutationQueue({
 
   const queueCreate = useCallback(() => {
     const pendingUri = `pending:${action}:${++nextPendingRecordId}`
+    markMultiplicityAddition(reconciliationKey, pendingUri)
     updateAction(state => addPendingRecord(state, pendingUri))
     return enqueueSubjectMutation(subjectKey, async () => {
       try {
         const {uri} = await createRecord()
+        confirmMultiplicityAddition(reconciliationKey, pendingUri, uri)
         updateAction(state => confirmPendingRecord(state, pendingUri, uri))
         onCreate?.()
         return uri
       } catch (error) {
+        rollbackMultiplicityAddition(reconciliationKey, pendingUri)
         updateAction(state => removeRecords(state, [pendingUri]))
         throw error
       }
     })
-  }, [action, createRecord, onCreate, subjectKey, updateAction])
+  }, [
+    action,
+    createRecord,
+    onCreate,
+    reconciliationKey,
+    subjectKey,
+    updateAction,
+  ])
 
   const queueRemoveOne = useCallback(
     () =>
@@ -314,17 +361,28 @@ function usePostMultiplicityMutationQueue({
           recordUri => !recordUri.startsWith('pending:'),
         )
         if (!uri) return undefined
-        updateAction(state => removeRecords(state, [uri]))
+        markMultiplicityRemoval(reconciliationKey, [uri])
+        const remaining = removeRecords(getAction(), [uri])
+        updateAction(() => remaining)
         try {
           await deleteRecord(uri)
-          onDelete?.()
+          commitMultiplicityRemoval(reconciliationKey, [uri])
+          onDelete?.(1, remaining.viewerRecordUris.length)
           return uri
         } catch (error) {
+          rollbackMultiplicityRemoval(reconciliationKey, [uri])
           updateAction(state => restoreRecords(state, [uri]))
           throw error
         }
       }),
-    [deleteRecord, getAction, onDelete, subjectKey, updateAction],
+    [
+      deleteRecord,
+      getAction,
+      onDelete,
+      reconciliationKey,
+      subjectKey,
+      updateAction,
+    ],
   )
 
   const queueRemoveAll = useCallback(
@@ -334,21 +392,37 @@ function usePostMultiplicityMutationQueue({
           uri => !uri.startsWith('pending:'),
         )
         if (uris.length === 0) return []
+        markMultiplicityRemoval(reconciliationKey, uris)
         updateAction(state => removeRecords(state, uris))
         const results = await Promise.allSettled(uris.map(deleteRecord))
         const failed = uris.filter(
           (_, index) => results[index]?.status === 'rejected',
         )
+        const removedCount = uris.length - failed.length
+        const removed = uris.filter(
+          (_, index) => results[index]?.status === 'fulfilled',
+        )
+        commitMultiplicityRemoval(reconciliationKey, removed)
+        rollbackMultiplicityRemoval(reconciliationKey, failed)
         if (failed.length > 0) {
           updateAction(state => restoreRecords(state, failed))
+          onDelete?.(removedCount, failed.length)
           throw new Error(
             `Removed ${uris.length - failed.length} of ${uris.length} ${action} records`,
           )
         }
-        onDelete?.()
+        onDelete?.(removedCount, 0)
         return uris
       }),
-    [action, deleteRecord, getAction, onDelete, subjectKey, updateAction],
+    [
+      action,
+      deleteRecord,
+      getAction,
+      onDelete,
+      reconciliationKey,
+      subjectKey,
+      updateAction,
+    ],
   )
 
   return [queueCreate, queueRemoveOne, queueRemoveAll] as const

@@ -1,3 +1,5 @@
+import {AtUri} from '@atproto/api'
+
 import {
   type ActorMultiplicityState,
   type MultiplicityActionState,
@@ -16,6 +18,8 @@ function object(value: unknown, label: string): Record<string, unknown> {
 function cloneActionState(
   value: unknown,
   label: string,
+  viewerDid: string,
+  collection: string,
 ): MultiplicityActionState {
   const state = object(value, label)
   if (!Number.isSafeInteger(state.count) || (state.count as number) < 0) {
@@ -30,6 +34,17 @@ function cloneActionState(
   if (new Set(state.viewerRecordUris).size !== state.viewerRecordUris.length) {
     throw new Error('Viewer record URIs must be unique')
   }
+  for (const uri of state.viewerRecordUris as string[]) {
+    let parsed: AtUri
+    try {
+      parsed = new AtUri(uri)
+    } catch {
+      throw new Error('Viewer record URI must be a valid AT URI')
+    }
+    if (parsed.host !== viewerDid || parsed.collection !== collection) {
+      throw new Error('Viewer record URI must belong to the requested viewer')
+    }
+  }
   if (state.viewerRecordUris.length > (state.count as number)) {
     throw new Error('Viewer record count cannot exceed aggregate count')
   }
@@ -39,20 +54,42 @@ function cloneActionState(
   }
 }
 
-function clonePostState(value: unknown, label: string): PostMultiplicityState {
+function clonePostState(
+  value: unknown,
+  label: string,
+  viewerDid: string,
+): PostMultiplicityState {
   const state = object(value, label)
   return {
-    like: cloneActionState(state.like, `${label}.like`),
-    repost: cloneActionState(state.repost, `${label}.repost`),
+    like: cloneActionState(
+      state.like,
+      `${label}.like`,
+      viewerDid,
+      'app.bsky.feed.like',
+    ),
+    repost: cloneActionState(
+      state.repost,
+      `${label}.repost`,
+      viewerDid,
+      'app.bsky.feed.repost',
+    ),
   }
 }
 
 function cloneActorState(
   value: unknown,
   label: string,
+  viewerDid: string,
 ): ActorMultiplicityState {
   const state = object(value, label)
-  return {follow: cloneActionState(state.follow, `${label}.follow`)}
+  return {
+    follow: cloneActionState(
+      state.follow,
+      `${label}.follow`,
+      viewerDid,
+      'app.bsky.graph.follow',
+    ),
+  }
 }
 
 export function validateBatchResponse(
@@ -68,14 +105,24 @@ export function validateBatchResponse(
       request.postUris.flatMap(uri =>
         posts[uri] === undefined
           ? []
-          : [[uri, clonePostState(posts[uri], `Post ${uri}`)]],
+          : [
+              [
+                uri,
+                clonePostState(posts[uri], `Post ${uri}`, request.viewerDid),
+              ],
+            ],
       ),
     ),
     actors: Object.fromEntries(
       request.actorDids.flatMap(did =>
         actors[did] === undefined
           ? []
-          : [[did, cloneActorState(actors[did], `Actor ${did}`)]],
+          : [
+              [
+                did,
+                cloneActorState(actors[did], `Actor ${did}`, request.viewerDid),
+              ],
+            ],
       ),
     ),
   }

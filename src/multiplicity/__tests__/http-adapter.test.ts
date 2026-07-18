@@ -98,6 +98,38 @@ describe('createHttpMultiplicityAdapter', () => {
       },
       message: 'array of strings',
     },
+    {
+      name: 'records owned by another viewer',
+      response: {
+        ...serviceResponse(),
+        posts: {
+          [POST_URI]: {
+            like: {
+              count: 1,
+              viewerRecordUris: ['at://did:plc:mallory/app.bsky.feed.like/one'],
+            },
+            repost: {count: 0, viewerRecordUris: []},
+          },
+        },
+      },
+      message: 'requested viewer',
+    },
+    {
+      name: 'records from the wrong collection',
+      response: {
+        ...serviceResponse(),
+        posts: {
+          [POST_URI]: {
+            like: {
+              count: 1,
+              viewerRecordUris: ['at://did:plc:alice/app.bsky.feed.repost/one'],
+            },
+            repost: {count: 0, viewerRecordUris: []},
+          },
+        },
+      },
+      message: 'requested viewer',
+    },
   ])('rejects $name', async ({response, message}) => {
     const adapter = createHttpMultiplicityAdapter({
       baseUrl: 'https://multiplicity.example',

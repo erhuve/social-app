@@ -393,6 +393,28 @@ export function HeaderStandardButtons({
                 viewerFollowCount > 0
                   ? () => removeFollowControl.open()
                   : undefined
+              }
+              accessibilityActions={
+                viewerFollowCount > 0
+                  ? [
+                      {
+                        name: 'manageFollows',
+                        label: _(msg`Manage your follows`),
+                      },
+                    ]
+                  : undefined
+              }
+              onAccessibilityAction={event => {
+                if (event.nativeEvent.actionName === 'manageFollows') {
+                  removeFollowControl.open()
+                }
+              }}
+              accessibilityHint={
+                viewerFollowCount > 0
+                  ? _(
+                      msg`Adds another follow. Use accessibility actions to remove follows.`,
+                    )
+                  : undefined
               }>
               {viewerFollowCount === 0 && <ButtonIcon icon={Plus} />}
               <ButtonText>

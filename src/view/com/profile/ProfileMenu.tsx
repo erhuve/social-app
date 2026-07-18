@@ -9,6 +9,7 @@ import {type NavigationProp} from '#/lib/routes/types'
 import {shareText, shareUrl} from '#/lib/sharing'
 import {toShareUrl} from '#/lib/strings/url-helpers'
 import {type Shadow} from '#/state/cache/types'
+import {useActorMultiplicity} from '#/state/queries/multiplicity'
 import {Nux, useNux, useSaveNux} from '#/state/queries/nuxs'
 import {
   RQKEY as profileQueryKey,
@@ -76,7 +77,8 @@ let ProfileMenu = ({
   const queryClient = useQueryClient()
   const navigation = useNavigation<NavigationProp>()
   const isSelf = currentAccount?.did === profile.did
-  const isFollowing = profile.viewer?.following
+  const multiplicity = useActorMultiplicity(profile)
+  const isFollowing = multiplicity.follow.viewerRecordUris.length > 0
   const isBlocked = profile.viewer?.blocking || profile.viewer?.blockedBy
   const isFollowingBlockedAccount = isFollowing && isBlocked
   const isLabelerAndNotBlocked = !!profile.associated?.labeler && !isBlocked
@@ -313,7 +315,9 @@ let ProfileMenu = ({
               <Menu.Group>
                 {!isSelf && (
                   <>
-                    {(isLabelerAndNotBlocked || isFollowingBlockedAccount) && (
+                    {(isLabelerAndNotBlocked ||
+                      !isBlocked ||
+                      isFollowingBlockedAccount) && (
                       <Menu.Item
                         testID="profileHeaderDropdownFollowBtn"
                         label={

@@ -6,10 +6,13 @@ import {useSession} from '#/state/session'
 import {MULTIPLICITY_SERVICE_URL} from '#/env'
 import {
   type ActorMultiplicityState,
+  applyMultiplicityOverlay,
   createBatchedMultiplicityAdapter,
   createFallbackAction,
   createHttpMultiplicityAdapter,
+  multiplicityReconciliationKey,
   type PostMultiplicityState,
+  reconcileMultiplicityAction,
 } from '#/multiplicity'
 import type * as bsky from '#/types/bsky'
 
@@ -36,6 +39,10 @@ export function usePostMultiplicity(
 ): PostMultiplicityState {
   const {currentAccount} = useSession()
   const viewerDid = currentAccount?.did ?? ''
+  const fallback = {
+    like: createFallbackAction(post.likeCount, post.viewer?.like),
+    repost: createFallbackAction(post.repostCount, post.viewer?.repost),
+  }
   const query = useQuery({
     queryKey: POST_MULTIPLICITY_RQKEY(viewerDid, post.uri),
     queryFn: async () => {
@@ -46,19 +53,37 @@ export function usePostMultiplicity(
       })
       const state = response.posts[post.uri]
       if (!state) throw new Error('Multiplicity response omitted the post')
-      return state
+      return {
+        like: reconcileMultiplicityAction(
+          multiplicityReconciliationKey(viewerDid, 'post', post.uri, 'like'),
+          state.like,
+          fallback.like,
+        ),
+        repost: reconcileMultiplicityAction(
+          multiplicityReconciliationKey(viewerDid, 'post', post.uri, 'repost'),
+          state.repost,
+          fallback.repost,
+        ),
+      }
     },
     enabled: Boolean(adapter && viewerDid),
     staleTime: STALE.SECONDS.FIFTEEN,
     retry: 1,
   })
 
-  return (
-    query.data ?? {
-      like: createFallbackAction(post.likeCount, post.viewer?.like),
-      repost: createFallbackAction(post.repostCount, post.viewer?.repost),
-    }
-  )
+  if (!query.data) return fallback
+  return {
+    like: applyMultiplicityOverlay(
+      multiplicityReconciliationKey(viewerDid, 'post', post.uri, 'like'),
+      query.data.like,
+      fallback.like,
+    ),
+    repost: applyMultiplicityOverlay(
+      multiplicityReconciliationKey(viewerDid, 'post', post.uri, 'repost'),
+      query.data.repost,
+      fallback.repost,
+    ),
+  }
 }
 
 export function useActorMultiplicity(
@@ -66,6 +91,12 @@ export function useActorMultiplicity(
 ): ActorMultiplicityState {
   const {currentAccount} = useSession()
   const viewerDid = currentAccount?.did ?? ''
+  const fallback = {
+    follow: createFallbackAction(
+      profile.viewer?.following ? 1 : 0,
+      profile.viewer?.following,
+    ),
+  }
   const query = useQuery({
     queryKey: ACTOR_MULTIPLICITY_RQKEY(viewerDid, profile.did),
     queryFn: async () => {
@@ -76,21 +107,32 @@ export function useActorMultiplicity(
       })
       const state = response.actors[profile.did]
       if (!state) throw new Error('Multiplicity response omitted the actor')
-      return state
+      return {
+        follow: reconcileMultiplicityAction(
+          multiplicityReconciliationKey(
+            viewerDid,
+            'actor',
+            profile.did,
+            'follow',
+          ),
+          state.follow,
+          fallback.follow,
+        ),
+      }
     },
     enabled: Boolean(adapter && viewerDid),
     staleTime: STALE.SECONDS.FIFTEEN,
     retry: 1,
   })
 
-  return (
-    query.data ?? {
-      follow: createFallbackAction(
-        profile.viewer?.following ? 1 : 0,
-        profile.viewer?.following,
-      ),
-    }
-  )
+  if (!query.data) return fallback
+  return {
+    follow: applyMultiplicityOverlay(
+      multiplicityReconciliationKey(viewerDid, 'actor', profile.did, 'follow'),
+      query.data.follow,
+      fallback.follow,
+    ),
+  }
 }
 
 export function updatePostMultiplicity(

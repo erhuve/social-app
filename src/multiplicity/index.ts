@@ -11,6 +11,19 @@ export {createFallbackAction} from './fallback'
 export type {HttpMultiplicityAdapterOptions} from './http-adapter'
 export {createHttpMultiplicityAdapter} from './http-adapter'
 export {
+  applyMultiplicityOverlay,
+  commitMultiplicityRemoval,
+  confirmMultiplicityAddition,
+  markMultiplicityAddition,
+  markMultiplicityRemoval,
+  mergeMultiplicityAction,
+  multiplicityReconciliationKey,
+  reconcileMultiplicityAction,
+  resetMultiplicityReconciliationForTest,
+  rollbackMultiplicityAddition,
+  rollbackMultiplicityRemoval,
+} from './reconciliation'
+export {
   createMultiplicityFollow,
   createMultiplicityLike,
   createMultiplicityRepost,

@@ -59,6 +59,11 @@ export function unlike(postUris: string[]) {
   )
 }
 
+export function unlikeOne(postUri: string) {
+  const index = userActionHistory.likes.lastIndexOf(postUri)
+  if (index !== -1) userActionHistory.likes.splice(index, 1)
+}
+
 export function follow(dids: string[]) {
   userActionHistory.follows = userActionHistory.follows
     .concat(dids)
@@ -75,6 +80,11 @@ export function unfollow(dids: string[]) {
   userActionHistory.follows = userActionHistory.follows.filter(
     uri => !dids.includes(uri),
   )
+}
+
+export function unfollowOne(did: string) {
+  const index = userActionHistory.follows.lastIndexOf(did)
+  if (index !== -1) userActionHistory.follows.splice(index, 1)
 }
 
 export function seen(posts: SeenPost[]) {

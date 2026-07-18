@@ -88,6 +88,7 @@ import {Header} from '#/screens/VideoFeed/components/Header'
 import {atoms as a, ios, platform, ThemeProvider, useTheme} from '#/alf'
 import {setSystemUITheme} from '#/alf/util/systemUI'
 import {Button, ButtonIcon, ButtonText} from '#/components/Button'
+import * as Dialog from '#/components/Dialog'
 import {Divider} from '#/components/Divider'
 import {ArrowLeft_Stroke2_Corner0_Rounded as ArrowLeftIcon} from '#/components/icons/Arrow'
 import {Check_Stroke2_Corner0_Rounded as CheckIcon} from '#/components/icons/Check'
@@ -99,7 +100,9 @@ import {Link} from '#/components/Link'
 import {ListFooter} from '#/components/Lists'
 import * as Hider from '#/components/moderation/Hider'
 import {PostControls} from '#/components/PostControls'
+import {MultiplicityRemoveDialog} from '#/components/PostControls/MultiplicityRemoveDialog'
 import {RichText} from '#/components/RichText'
+import * as Toast from '#/components/Toast'
 import {Text} from '#/components/Typography'
 import {useAnalytics} from '#/analytics'
 import {IS_ANDROID} from '#/env'
@@ -783,7 +786,10 @@ function Overlay({
 
   const profile = useProfileShadow(post.author)
   const multiplicity = useActorMultiplicity(profile)
-  const [queueFollow] = useProfileFollowMutationQueue(profile, 'ImmersiveVideo')
+  const [queueFollow, queueUnfollow, queueUnfollowAll] =
+    useProfileFollowMutationQueue(profile, 'ImmersiveVideo')
+  const removeFollowControl = Dialog.useDialogControl()
+  const viewerFollowCount = multiplicity.follow.viewerRecordUris.length
 
   const rkey = new AtUri(post.uri).rkey
   const record = bsky.dangerousIsType<AppBskyFeedPost.Record>(
@@ -889,41 +895,70 @@ function Overlay({
                   </View>
                 </Link>
                 {/* show button based on non-reactive version, so it doesn't hide on press */}
-                {post.author.did !== currentAccount?.did &&
-                  !post.author.viewer?.following && (
+                {post.author.did !== currentAccount?.did && (
+                  <>
                     <Button
                       label={
-                        profile.viewer?.following
+                        viewerFollowCount > 0
                           ? l`Follow ${handle} again`
                           : l`Follow ${handle}`
                       }
+                      onLongPress={
+                        viewerFollowCount > 0
+                          ? () => removeFollowControl.open()
+                          : undefined
+                      }
+                      accessibilityActions={
+                        viewerFollowCount > 0
+                          ? [
+                              {
+                                name: 'manageFollows',
+                                label: l`Manage your follows`,
+                              },
+                            ]
+                          : undefined
+                      }
+                      onAccessibilityAction={event => {
+                        if (event.nativeEvent.actionName === 'manageFollows') {
+                          removeFollowControl.open()
+                        }
+                      }}
                       accessibilityHint={
-                        profile.viewer?.following
-                          ? l`Adds another follow for this user`
-                          : ''
+                        viewerFollowCount > 0
+                          ? l`Adds another follow. Use accessibility actions to remove follows.`
+                          : undefined
                       }
                       size="small"
                       variant="solid"
                       color="secondary_inverted"
                       style={[a.mb_xs]}
-                      onPress={() => void queueFollow()}>
-                      {!!profile.viewer?.following && (
-                        <ButtonIcon icon={CheckIcon} />
-                      )}
+                      onPress={() => {
+                        void queueFollow().catch(error => {
+                          Toast.show(l`There was an issue! ${String(error)}`, {
+                            type: 'error',
+                          })
+                        })
+                      }}>
+                      {viewerFollowCount > 0 && <ButtonIcon icon={CheckIcon} />}
                       <ButtonText>
-                        {multiplicity.follow.viewerRecordUris.length > 1 ? (
-                          <Trans>
-                            Following ×
-                            {multiplicity.follow.viewerRecordUris.length}
-                          </Trans>
-                        ) : profile.viewer?.following ? (
+                        {viewerFollowCount > 1 ? (
+                          <Trans>Following ×{viewerFollowCount}</Trans>
+                        ) : viewerFollowCount > 0 ? (
                           <Trans>Following</Trans>
                         ) : (
                           <Trans>Follow</Trans>
                         )}
                       </ButtonText>
                     </Button>
-                  )}
+                    <MultiplicityRemoveDialog
+                      control={removeFollowControl}
+                      actionLabel={l`Remove follows`}
+                      ownedCount={viewerFollowCount}
+                      onRemoveOne={queueUnfollow}
+                      onRemoveAll={queueUnfollowAll}
+                    />
+                  </>
+                )}
               </View>
               {record?.text?.trim() && (
                 <ExpandableRichTextView
@@ -1140,7 +1175,9 @@ function PlayPauseTapArea({
       clearTimeout(doubleTapRef.current)
       doubleTapRef.current = null
       playHaptic('Light')
-      void queueLike()
+      void queueLike().catch(error => {
+        Toast.show(l`There was an issue! ${String(error)}`, {type: 'error'})
+      })
       sendInteraction({
         item: post.uri,
         event: 'app.bsky.feed.defs#interactionLike',

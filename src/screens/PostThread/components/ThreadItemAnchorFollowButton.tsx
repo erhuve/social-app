@@ -1,9 +1,8 @@
-import {useCallback, useEffect, useMemo, useState} from 'react'
+import {useCallback} from 'react'
 import {type AppBskyActorDefs} from '@atproto/api'
 import {msg} from '@lingui/core/macro'
 import {useLingui} from '@lingui/react'
 import {Trans} from '@lingui/react/macro'
-import {useNavigation} from '@react-navigation/native'
 
 import {logger} from '#/logger'
 import {useProfileShadow} from '#/state/cache/profile-shadow'
@@ -15,8 +14,10 @@ import {
 import {useRequireAuth} from '#/state/session'
 import {atoms as a, useBreakpoints} from '#/alf'
 import {Button, ButtonIcon, ButtonText} from '#/components/Button'
+import * as Dialog from '#/components/Dialog'
 import {Check_Stroke2_Corner0_Rounded as CheckIcon} from '#/components/icons/Check'
 import {PlusLarge_Stroke2_Corner0_Rounded as PlusIcon} from '#/components/icons/Plus'
+import {MultiplicityRemoveDialog} from '#/components/PostControls/MultiplicityRemoveDialog'
 import * as Toast from '#/components/Toast'
 import {IS_IOS} from '#/env'
 import {GrowthHack} from './GrowthHack'
@@ -60,52 +61,18 @@ function PostThreadFollowBtnLoaded({
 }: {
   profile: AppBskyActorDefs.ProfileViewDetailed
 }) {
-  const navigation = useNavigation()
   const {_} = useLingui()
   const {gtMobile} = useBreakpoints()
   const profile = useProfileShadow(profileUnshadowed)
   const multiplicity = useActorMultiplicity(profile)
-  const [queueFollow] = useProfileFollowMutationQueue(profile, 'PostThreadItem')
+  const [queueFollow, queueUnfollow, queueUnfollowAll] =
+    useProfileFollowMutationQueue(profile, 'PostThreadItem')
   const requireAuth = useRequireAuth()
+  const removeFollowControl = Dialog.useDialogControl()
 
   const viewerFollowCount = multiplicity.follow.viewerRecordUris.length
   const isFollowing = viewerFollowCount > 0
   const isFollowedBy = !!profile.viewer?.followedBy
-  const [wasFollowing, setWasFollowing] = useState<boolean>(isFollowing)
-
-  // This prevents the button from disappearing as soon as we follow.
-  const showFollowBtn = useMemo(
-    () => !isFollowing || !wasFollowing,
-    [isFollowing, wasFollowing],
-  )
-
-  /**
-   * We want this button to stay visible even after following, so that the user can unfollow if they want.
-   * However, we need it to disappear after we push to a screen and then come back. We also need it to
-   * show up if we view the post while following, go to the profile and unfollow, then come back to the
-   * post.
-   *
-   * We want to update wasFollowing both on blur and on focus so that we hit all these cases. On native,
-   * we could do this only on focus because the transition animation gives us time to not notice the
-   * sudden rendering of the button. However, on web if we do this, there's an obvious flicker once the
-   * button renders. So, we update the state in both cases.
-   */
-  useEffect(() => {
-    const updateWasFollowing = () => {
-      if (wasFollowing !== isFollowing) {
-        setWasFollowing(isFollowing)
-      }
-    }
-
-    const unsubscribeFocus = navigation.addListener('focus', updateWasFollowing)
-    const unsubscribeBlur = navigation.addListener('blur', updateWasFollowing)
-
-    return () => {
-      unsubscribeFocus()
-      unsubscribeBlur()
-    }
-  }, [isFollowing, wasFollowing, navigation])
-
   const onPress = useCallback(() => {
     requireAuth(async () => {
       try {
@@ -121,32 +88,61 @@ function PostThreadFollowBtnLoaded({
     })
   }, [requireAuth, queueFollow, _])
 
-  if (!showFollowBtn) return null
-
   return (
-    <Button
-      testID="followBtn"
-      label={_(msg`Follow ${profile.handle}`)}
-      onPress={onPress}
-      size="small"
-      color={isFollowing ? 'secondary' : 'secondary_inverted'}
-      style={[a.rounded_full]}>
-      {gtMobile && (
-        <ButtonIcon icon={isFollowing ? CheckIcon : PlusIcon} size="sm" />
-      )}
-      <ButtonText maxFontSizeMultiplier={2}>
-        {!isFollowing ? (
-          isFollowedBy ? (
-            <Trans>Follow back</Trans>
-          ) : (
-            <Trans>Follow</Trans>
-          )
-        ) : viewerFollowCount > 1 ? (
-          <Trans>Following ×{viewerFollowCount}</Trans>
-        ) : (
-          <Trans>Following</Trans>
+    <>
+      <Button
+        testID="followBtn"
+        label={
+          isFollowing
+            ? _(msg`Follow ${profile.handle} again`)
+            : _(msg`Follow ${profile.handle}`)
+        }
+        onPress={onPress}
+        onLongPress={isFollowing ? () => removeFollowControl.open() : undefined}
+        accessibilityActions={
+          isFollowing
+            ? [{name: 'manageFollows', label: _(msg`Manage your follows`)}]
+            : undefined
+        }
+        onAccessibilityAction={event => {
+          if (event.nativeEvent.actionName === 'manageFollows') {
+            removeFollowControl.open()
+          }
+        }}
+        accessibilityHint={
+          isFollowing
+            ? _(
+                msg`Adds another follow. Use accessibility actions to remove follows.`,
+              )
+            : undefined
+        }
+        size="small"
+        color={isFollowing ? 'secondary' : 'secondary_inverted'}
+        style={[a.rounded_full]}>
+        {gtMobile && (
+          <ButtonIcon icon={isFollowing ? CheckIcon : PlusIcon} size="sm" />
         )}
-      </ButtonText>
-    </Button>
+        <ButtonText maxFontSizeMultiplier={2}>
+          {!isFollowing ? (
+            isFollowedBy ? (
+              <Trans>Follow back</Trans>
+            ) : (
+              <Trans>Follow</Trans>
+            )
+          ) : viewerFollowCount > 1 ? (
+            <Trans>Following ×{viewerFollowCount}</Trans>
+          ) : (
+            <Trans>Following</Trans>
+          )}
+        </ButtonText>
+      </Button>
+      <MultiplicityRemoveDialog
+        control={removeFollowControl}
+        actionLabel={_(msg`Remove follows`)}
+        ownedCount={viewerFollowCount}
+        onRemoveOne={queueUnfollow}
+        onRemoveAll={queueUnfollowAll}
+      />
+    </>
   )
 }

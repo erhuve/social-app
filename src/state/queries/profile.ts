@@ -40,13 +40,20 @@ import {type Metrics, toClout} from '#/analytics/metrics'
 import {
   type ActorMultiplicityState,
   addPendingRecord,
+  commitMultiplicityRemoval,
+  confirmMultiplicityAddition,
   confirmPendingRecord,
   createFallbackAction,
   createMultiplicityFollow,
   enqueueSubjectMutation,
+  markMultiplicityAddition,
+  markMultiplicityRemoval,
   type MultiplicityActionState,
+  multiplicityReconciliationKey,
   removeRecords,
   restoreRecords,
+  rollbackMultiplicityAddition,
+  rollbackMultiplicityRemoval,
 } from '#/multiplicity'
 import type * as bsky from '#/types/bsky'
 import {
@@ -346,13 +353,21 @@ export function useProfileFollowMutationQueue(
     )
   }, [did, fallback.follow, queryClient, viewerDid])
 
-  const subjectKey = `follow:${did}`
+  const subjectKey = `${viewerDid}:follow:${did}`
+  const reconciliationKey = multiplicityReconciliationKey(
+    viewerDid,
+    'actor',
+    did,
+    'follow',
+  )
   const queueFollow = useCallback(() => {
     const pendingUri = `pending:follow:${++nextPendingFollowId}`
+    markMultiplicityAddition(reconciliationKey, pendingUri)
     updateFollow(state => addPendingRecord(state, pendingUri))
     return enqueueSubjectMutation(subjectKey, async () => {
       try {
         const {uri} = await followMutation.mutateAsync({did})
+        confirmMultiplicityAddition(reconciliationKey, pendingUri, uri)
         updateFollow(state => confirmPendingRecord(state, pendingUri, uri))
         userActionHistory.follow([did])
         void agent.app.bsky.graph
@@ -366,11 +381,12 @@ export function useProfileFollowMutationQueue(
           })
         return uri
       } catch (error) {
+        rollbackMultiplicityAddition(reconciliationKey, pendingUri)
         updateFollow(state => removeRecords(state, [pendingUri]))
         throw error
       }
     })
-  }, [agent, did, followMutation, subjectKey, updateFollow])
+  }, [agent, did, followMutation, reconciliationKey, subjectKey, updateFollow])
 
   const queueUnfollow = useCallback(
     () =>
@@ -379,17 +395,32 @@ export function useProfileFollowMutationQueue(
           recordUri => !recordUri.startsWith('pending:'),
         )
         if (!uri) return undefined
-        updateFollow(state => removeRecords(state, [uri]))
+        markMultiplicityRemoval(reconciliationKey, [uri])
+        const remaining = removeRecords(getFollow(), [uri])
+        updateFollow(() => remaining)
         try {
           await unfollowMutation.mutateAsync({did, followUri: uri})
-          userActionHistory.unfollow([did])
+          commitMultiplicityRemoval(reconciliationKey, [uri])
+          if (remaining.viewerRecordUris.length === 0) {
+            userActionHistory.unfollow([did])
+          } else {
+            userActionHistory.unfollowOne(did)
+          }
           return uri
         } catch (error) {
+          rollbackMultiplicityRemoval(reconciliationKey, [uri])
           updateFollow(state => restoreRecords(state, [uri]))
           throw error
         }
       }),
-    [did, getFollow, subjectKey, unfollowMutation, updateFollow],
+    [
+      did,
+      getFollow,
+      reconciliationKey,
+      subjectKey,
+      unfollowMutation,
+      updateFollow,
+    ],
   )
 
   const queueUnfollowAll = useCallback(
@@ -399,6 +430,7 @@ export function useProfileFollowMutationQueue(
           uri => !uri.startsWith('pending:'),
         )
         if (uris.length === 0) return []
+        markMultiplicityRemoval(reconciliationKey, uris)
         updateFollow(state => removeRecords(state, uris))
         const results = await Promise.allSettled(
           uris.map(followUri => unfollowMutation.mutateAsync({did, followUri})),
@@ -406,8 +438,17 @@ export function useProfileFollowMutationQueue(
         const failed = uris.filter(
           (_, index) => results[index]?.status === 'rejected',
         )
+        const removedCount = uris.length - failed.length
+        const removed = uris.filter(
+          (_, index) => results[index]?.status === 'fulfilled',
+        )
+        commitMultiplicityRemoval(reconciliationKey, removed)
+        rollbackMultiplicityRemoval(reconciliationKey, failed)
         if (failed.length > 0) {
           updateFollow(state => restoreRecords(state, failed))
+          for (let index = 0; index < removedCount; index++) {
+            userActionHistory.unfollowOne(did)
+          }
           throw new Error(
             `Removed ${uris.length - failed.length} of ${uris.length} follow records`,
           )
@@ -415,7 +456,14 @@ export function useProfileFollowMutationQueue(
         userActionHistory.unfollow([did])
         return uris
       }),
-    [did, getFollow, subjectKey, unfollowMutation, updateFollow],
+    [
+      did,
+      getFollow,
+      reconciliationKey,
+      subjectKey,
+      unfollowMutation,
+      updateFollow,
+    ],
   )
 
   return [queueFollow, queueUnfollow, queueUnfollowAll] as const

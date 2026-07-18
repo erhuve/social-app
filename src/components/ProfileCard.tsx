@@ -565,6 +565,21 @@ export function FollowButtonInner({
         }}
         onLongPress={
           viewerFollowCount > 0 ? () => removeDialog.open() : undefined
+        }
+        accessibilityActions={
+          viewerFollowCount > 0
+            ? [{name: 'manageFollows', label: l`Manage your follows`}]
+            : undefined
+        }
+        onAccessibilityAction={event => {
+          if (event.nativeEvent.actionName === 'manageFollows') {
+            removeDialog.open()
+          }
+        }}
+        accessibilityHint={
+          viewerFollowCount > 0
+            ? l`Adds another follow. Use accessibility actions to remove follows.`
+            : undefined
         }>
         {withIcon && (
           <ButtonIcon

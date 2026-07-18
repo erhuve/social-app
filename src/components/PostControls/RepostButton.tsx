@@ -62,6 +62,20 @@ let RepostButton = ({
         big={big}
         onPress={onPress}
         onLongPress={onLongPress}
+        accessibilityActions={[
+          {
+            name: 'showRepostOptions',
+            label: _(msg`Show repost and quote options`),
+          },
+        ]}
+        onAccessibilityAction={event => {
+          if (event.nativeEvent.actionName === 'showRepostOptions') {
+            onLongPress()
+          }
+        }}
+        accessibilityHint={_(
+          msg`Adds another repost. Use accessibility actions for quote and removal options.`,
+        )}
         label={
           isReposted
             ? _(

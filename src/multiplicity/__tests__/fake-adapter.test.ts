@@ -98,7 +98,10 @@ describe('createFakeMultiplicityAdapter', () => {
     },
     {
       name: 'viewer counts above the aggregate',
-      like: {count: 0, viewerRecordUris: ['one']},
+      like: {
+        count: 0,
+        viewerRecordUris: ['at://did:plc:alice/app.bsky.feed.like/one'],
+      },
       message: 'cannot exceed aggregate',
     },
   ])('rejects $name', ({like, message}) => {

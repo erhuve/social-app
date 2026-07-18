@@ -125,7 +125,7 @@ let PostControls = ({
     } catch (err) {
       const e = err as Error
       if (e?.name !== 'AbortError') {
-        throw e
+        Toast.show(l`There was an issue! ${e.toString()}`, {type: 'error'})
       }
     }
   }
@@ -149,7 +149,7 @@ let PostControls = ({
     } catch (err) {
       const e = err as Error
       if (e?.name !== 'AbortError') {
-        throw e
+        Toast.show(l`There was an issue! ${e.toString()}`, {type: 'error'})
       }
     }
   }
@@ -270,6 +270,21 @@ let PostControls = ({
             onLongPress={
               viewerLikeCount > 0
                 ? () => requireAuth(() => likeRemoveDialog.open())
+                : undefined
+            }
+            accessibilityActions={
+              viewerLikeCount > 0
+                ? [{name: 'manageLikes', label: l`Manage your likes`}]
+                : undefined
+            }
+            onAccessibilityAction={event => {
+              if (event.nativeEvent.actionName === 'manageLikes') {
+                requireAuth(() => likeRemoveDialog.open())
+              }
+            }}
+            accessibilityHint={
+              viewerLikeCount > 0
+                ? l`Adds another like. Use accessibility actions to remove likes.`
                 : undefined
             }
             label={
