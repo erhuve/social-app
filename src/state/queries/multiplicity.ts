@@ -105,3 +105,16 @@ export function updatePostMultiplicity(
     current => update(current ?? fallback),
   )
 }
+
+export function updateActorMultiplicity(
+  queryClient: QueryClient,
+  viewerDid: string,
+  actorDid: string,
+  fallback: ActorMultiplicityState,
+  update: (state: ActorMultiplicityState) => ActorMultiplicityState,
+) {
+  queryClient.setQueryData<ActorMultiplicityState>(
+    ACTOR_MULTIPLICITY_RQKEY(viewerDid, actorDid),
+    current => update(current ?? fallback),
+  )
+}

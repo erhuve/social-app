@@ -38,10 +38,12 @@ import {
   type ButtonProps,
   ButtonText,
 } from '#/components/Button'
+import * as Dialog from '#/components/Dialog'
 import {Check_Stroke2_Corner0_Rounded as Check} from '#/components/icons/Check'
 import {PlusLarge_Stroke2_Corner0_Rounded as Plus} from '#/components/icons/Plus'
 import {Link as InternalLink, type LinkProps} from '#/components/Link'
 import * as Pills from '#/components/Pills'
+import {MultiplicityRemoveDialog} from '#/components/PostControls/MultiplicityRemoveDialog'
 import {ProfileBadges} from '#/components/ProfileBadges'
 import {RichText} from '#/components/RichText'
 import * as Toast from '#/components/Toast'
@@ -485,13 +487,16 @@ export function FollowButtonInner({
   const profile = useProfileShadow(profileUnshadowed)
   const multiplicity = useActorMultiplicity(profile)
   const moderation = moderateProfile(profile, moderationOpts)
-  const [queueFollow, queueUnfollow] = useProfileFollowMutationQueue(
-    profile,
-    logContext,
-    position,
-    contextProfileDid,
-  )
+  const [queueFollow, queueUnfollow, queueUnfollowAll] =
+    useProfileFollowMutationQueue(
+      profile,
+      logContext,
+      position,
+      contextProfileDid,
+    )
   const isRound = Boolean(rest.shape && rest.shape === 'round')
+  const removeDialog = Dialog.useDialogControl()
+  const viewerFollowCount = multiplicity.follow.viewerRecordUris.length
 
   const onPressFollow = async (e: GestureResponderEvent) => {
     e.preventDefault()
@@ -516,34 +521,12 @@ export function FollowButtonInner({
     }
   }
 
-  const onPressUnfollow = async (e: GestureResponderEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    try {
-      await queueUnfollow()
-      Toast.show(
-        l`No longer following ${sanitizeDisplayName(
-          profile.displayName || profile.handle,
-          moderation.ui('displayName'),
-        )}`,
-      )
-      onPressProp?.(e)
-    } catch (e) {
-      const err = e as Error
-      if (err?.name !== 'AbortError') {
-        Toast.show(l`An issue occurred, please try again.`, {
-          type: 'error',
-        })
-      }
-    }
-  }
-
-  const unfollowLabel =
-    multiplicity.follow.count > 1
-      ? l`Following ×${multiplicity.follow.count}`
+  const followingLabel =
+    viewerFollowCount > 1
+      ? l`Following ×${viewerFollowCount}`
       : l({
           message: 'Following',
-          comment: 'User is following this account, click to unfollow',
+          comment: 'User is following this account',
         })
   const followLabel = profile.viewer?.followedBy
     ? l({
@@ -565,37 +548,43 @@ export function FollowButtonInner({
 
   return (
     <View>
-      {profile.viewer.following ? (
-        <Button
-          label={unfollowLabel}
-          size="small"
-          variant="solid"
-          color="secondary"
-          {...rest}
-          onPress={(e: GestureResponderEvent) => {
-            void onPressUnfollow(e)
-          }}>
-          {withIcon && (
-            <ButtonIcon icon={Check} position={isRound ? undefined : 'left'} />
-          )}
-          {isRound ? null : <ButtonText>{unfollowLabel}</ButtonText>}
-        </Button>
-      ) : (
-        <Button
-          label={followLabel}
-          size="small"
-          variant="solid"
-          color={colorInverted ? 'secondary_inverted' : 'primary'}
-          {...rest}
-          onPress={(e: GestureResponderEvent) => {
-            void onPressFollow(e)
-          }}>
-          {withIcon && (
-            <ButtonIcon icon={Plus} position={isRound ? undefined : 'left'} />
-          )}
-          {isRound ? null : <ButtonText>{followLabel}</ButtonText>}
-        </Button>
-      )}
+      <Button
+        label={viewerFollowCount > 0 ? l`Follow again` : followLabel}
+        size="small"
+        variant="solid"
+        color={
+          viewerFollowCount > 0
+            ? 'secondary'
+            : colorInverted
+              ? 'secondary_inverted'
+              : 'primary'
+        }
+        {...rest}
+        onPress={(event: GestureResponderEvent) => {
+          void onPressFollow(event)
+        }}
+        onLongPress={
+          viewerFollowCount > 0 ? () => removeDialog.open() : undefined
+        }>
+        {withIcon && (
+          <ButtonIcon
+            icon={viewerFollowCount > 0 ? Check : Plus}
+            position={isRound ? undefined : 'left'}
+          />
+        )}
+        {isRound ? null : (
+          <ButtonText>
+            {viewerFollowCount > 0 ? followingLabel : followLabel}
+          </ButtonText>
+        )}
+      </Button>
+      <MultiplicityRemoveDialog
+        control={removeDialog}
+        actionLabel={l`Remove follows`}
+        ownedCount={viewerFollowCount}
+        onRemoveOne={queueUnfollow}
+        onRemoveAll={queueUnfollowAll}
+      />
     </View>
   )
 }

@@ -17,6 +17,7 @@ import {sanitizeDisplayName} from '#/lib/strings/display-names'
 import {sanitizeHandle} from '#/lib/strings/handles'
 import {useProfileShadow} from '#/state/cache/profile-shadow'
 import {useModerationOpts} from '#/state/preferences/moderation-opts'
+import {useActorMultiplicity} from '#/state/queries/multiplicity'
 import {usePrefetchProfileQuery, useProfileQuery} from '#/state/queries/profile'
 import {useSession} from '#/state/session'
 import {formatCount} from '#/view/com/util/numeric/format'
@@ -431,7 +432,8 @@ function Inner({
   )
   const [descriptionRT] = useRichText(profile.description ?? '')
   const profileShadow = useProfileShadow(profile)
-  const {follow, unfollow} = useFollowMethods({
+  const multiplicity = useActorMultiplicity(profileShadow)
+  const {follow} = useFollowMethods({
     profile: profileShadow,
     logContext: 'ProfileHoverCard',
   })
@@ -491,19 +493,23 @@ function Inner({
               variant="solid"
               label={
                 profileShadow.viewer?.following
-                  ? _(msg`Following`)
+                  ? _(msg`Follow again`)
                   : _(msg`Follow`)
               }
               style={[a.rounded_full]}
-              onPress={profileShadow.viewer?.following ? unfollow : follow}>
+              onPress={follow}>
               <ButtonIcon
                 position="left"
                 icon={profileShadow.viewer?.following ? Check : Plus}
               />
               <ButtonText>
-                {profileShadow.viewer?.following
-                  ? _(msg`Following`)
-                  : _(msg`Follow`)}
+                {multiplicity.follow.viewerRecordUris.length > 1
+                  ? _(
+                      msg`Following ×${multiplicity.follow.viewerRecordUris.length}`,
+                    )
+                  : profileShadow.viewer?.following
+                    ? _(msg`Following`)
+                    : _(msg`Follow`)}
               </ButtonText>
             </Button>
           ))}

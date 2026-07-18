@@ -94,7 +94,7 @@ let ProfileMenu = ({
 
   const [queueMute, queueUnmute] = useProfileMuteMutationQueue(profile)
   const [queueBlock, queueUnblock] = useProfileBlockMutationQueue(profile)
-  const [queueFollow, queueUnfollow] = useProfileFollowMutationQueue(
+  const [queueFollow, , queueUnfollowAll] = useProfileFollowMutationQueue(
     profile,
     'ProfileMenu',
   )
@@ -209,7 +209,7 @@ let ProfileMenu = ({
 
   const onPressUnfollowAccount = useCallback(async () => {
     try {
-      await queueUnfollow()
+      await queueUnfollowAll()
       Toast.show(l({message: 'Account unfollowed', context: 'toast'}))
     } catch (err) {
       const e = err as Error
@@ -220,7 +220,7 @@ let ProfileMenu = ({
         })
       }
     }
-  }, [l, ax, queueUnfollow])
+  }, [l, ax, queueUnfollowAll])
 
   const onPressReportAccount = useCallback(() => {
     reportDialogControl.open()

@@ -13,11 +13,11 @@ import {
   type AppBskyFeedDefs,
   AppBskyFeedPost,
   AppBskyGraphFollow,
+  AtUri,
   moderateProfile,
   type ModerationDecision,
   type ModerationOpts,
 } from '@atproto/api'
-import {AtUri} from '@atproto/api'
 import {TID} from '@atproto/common-web'
 import {msg, plural} from '@lingui/core/macro'
 import {useLingui} from '@lingui/react'
@@ -35,6 +35,7 @@ import {niceDate} from '#/lib/strings/time'
 import {s} from '#/lib/styles'
 import {logger} from '#/logger'
 import {useProfileShadow} from '#/state/cache/profile-shadow'
+import {useActorMultiplicity} from '#/state/queries/multiplicity'
 import {type FeedNotification} from '#/state/queries/notifications/feed'
 import {useProfileFollowMutationQueue} from '#/state/queries/profile'
 import {unstableCacheProfileView} from '#/state/queries/unstable-profile-cache'
@@ -770,7 +771,8 @@ function FollowBackButton({profile}: {profile: AppBskyActorDefs.ProfileView}) {
   const {_} = useLingui()
   const {currentAccount, hasSession} = useSession()
   const profileShadow = useProfileShadow(profile)
-  const [queueFollow, queueUnfollow] = useProfileFollowMutationQueue(
+  const multiplicity = useActorMultiplicity(profileShadow)
+  const [queueFollow] = useProfileFollowMutationQueue(
     profileShadow,
     'ProfileCard',
   )
@@ -802,28 +804,6 @@ function FollowBackButton({profile}: {profile: AppBskyActorDefs.ProfileView}) {
     }
   }
 
-  const onPressUnfollow = async (e: GestureResponderEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-
-    try {
-      await queueUnfollow()
-      Toast.show(
-        _(
-          msg`No longer following ${sanitizeDisplayName(
-            profile.displayName || profile.handle,
-          )}`,
-        ),
-      )
-    } catch (err: any) {
-      if (err?.name !== 'AbortError') {
-        Toast.show(_(msg`An issue occurred, please try again.`), {
-          type: 'error',
-        })
-      }
-    }
-  }
-
   // Don't show button if viewer data is missing or user is blocked
   if (!profileShadow.viewer) {
     return null
@@ -836,42 +816,43 @@ function FollowBackButton({profile}: {profile: AppBskyActorDefs.ProfileView}) {
     return null
   }
 
-  const isFollowing = profileShadow.viewer.following
+  const viewerFollowCount = multiplicity.follow.viewerRecordUris.length
+  const isFollowing = viewerFollowCount > 0
   const isFollowedBy = profileShadow.viewer.followedBy
   const followingLabel = _(
     msg({
       message: 'Following',
-      comment: 'User is following this account, click to unfollow',
+      comment: 'User is following this account',
     }),
   )
 
   return (
     <View style={[a.pt_sm]}>
-      {isFollowing ? (
-        <Button
-          label={followingLabel}
-          color="secondary"
-          size="small"
-          style={[a.self_start]}
-          onPress={onPressUnfollow}>
-          <ButtonIcon icon={CheckIcon} />
-          <ButtonText>
-            <Trans>Following</Trans>
-          </ButtonText>
-        </Button>
-      ) : (
-        <Button
-          label={isFollowedBy ? _(msg`Follow back`) : _(msg`Follow`)}
-          color="primary"
-          size="small"
-          style={[a.self_start]}
-          onPress={onPressFollow}>
-          <ButtonIcon icon={PlusIcon} />
-          <ButtonText>
-            {isFollowedBy ? <Trans>Follow back</Trans> : <Trans>Follow</Trans>}
-          </ButtonText>
-        </Button>
-      )}
+      <Button
+        label={
+          isFollowing
+            ? _(msg`Follow again`)
+            : isFollowedBy
+              ? _(msg`Follow back`)
+              : _(msg`Follow`)
+        }
+        color={isFollowing ? 'secondary' : 'primary'}
+        size="small"
+        style={[a.self_start]}
+        onPress={onPressFollow}>
+        <ButtonIcon icon={isFollowing ? CheckIcon : PlusIcon} />
+        <ButtonText>
+          {viewerFollowCount > 1 ? (
+            <Trans>Following ×{viewerFollowCount}</Trans>
+          ) : isFollowing ? (
+            followingLabel
+          ) : isFollowedBy ? (
+            <Trans>Follow back</Trans>
+          ) : (
+            <Trans>Follow</Trans>
+          )}
+        </ButtonText>
+      </Button>
     </View>
   )
 }

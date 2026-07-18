@@ -65,13 +65,11 @@ function PostThreadFollowBtnLoaded({
   const {gtMobile} = useBreakpoints()
   const profile = useProfileShadow(profileUnshadowed)
   const multiplicity = useActorMultiplicity(profile)
-  const [queueFollow, queueUnfollow] = useProfileFollowMutationQueue(
-    profile,
-    'PostThreadItem',
-  )
+  const [queueFollow] = useProfileFollowMutationQueue(profile, 'PostThreadItem')
   const requireAuth = useRequireAuth()
 
-  const isFollowing = !!profile.viewer?.following
+  const viewerFollowCount = multiplicity.follow.viewerRecordUris.length
+  const isFollowing = viewerFollowCount > 0
   const isFollowedBy = !!profile.viewer?.followedBy
   const [wasFollowing, setWasFollowing] = useState<boolean>(isFollowing)
 
@@ -109,34 +107,19 @@ function PostThreadFollowBtnLoaded({
   }, [isFollowing, wasFollowing, navigation])
 
   const onPress = useCallback(() => {
-    if (!isFollowing) {
-      requireAuth(async () => {
-        try {
-          await queueFollow()
-        } catch (e: any) {
-          if (e?.name !== 'AbortError') {
-            logger.error('Failed to follow', {message: String(e)})
-            Toast.show(_(msg`There was an issue! ${e.toString()}`), {
-              type: 'error',
-            })
-          }
+    requireAuth(async () => {
+      try {
+        await queueFollow()
+      } catch (e: any) {
+        if (e?.name !== 'AbortError') {
+          logger.error('Failed to follow', {message: String(e)})
+          Toast.show(_(msg`There was an issue! ${e.toString()}`), {
+            type: 'error',
+          })
         }
-      })
-    } else {
-      requireAuth(async () => {
-        try {
-          await queueUnfollow()
-        } catch (e: any) {
-          if (e?.name !== 'AbortError') {
-            logger.error('Failed to unfollow', {message: String(e)})
-            Toast.show(_(msg`There was an issue! ${e.toString()}`), {
-              type: 'error',
-            })
-          }
-        }
-      })
-    }
-  }, [isFollowing, requireAuth, queueFollow, _, queueUnfollow])
+      }
+    })
+  }, [requireAuth, queueFollow, _])
 
   if (!showFollowBtn) return null
 
@@ -158,8 +141,8 @@ function PostThreadFollowBtnLoaded({
           ) : (
             <Trans>Follow</Trans>
           )
-        ) : multiplicity.follow.count > 1 ? (
-          <Trans>Following ×{multiplicity.follow.count}</Trans>
+        ) : viewerFollowCount > 1 ? (
+          <Trans>Following ×{viewerFollowCount}</Trans>
         ) : (
           <Trans>Following</Trans>
         )}

@@ -1,4 +1,4 @@
-import {useCallback} from 'react'
+import {useCallback, useMemo} from 'react'
 import {
   type AppBskyActorDefs,
   type AppBskyActorGetProfile,
@@ -37,13 +37,24 @@ import {useAgent, useSession} from '#/state/session'
 import * as userActionHistory from '#/state/userActionHistory'
 import {useAnalytics} from '#/analytics'
 import {type Metrics, toClout} from '#/analytics/metrics'
-import {createMultiplicityFollow} from '#/multiplicity'
+import {
+  type ActorMultiplicityState,
+  addPendingRecord,
+  confirmPendingRecord,
+  createFallbackAction,
+  createMultiplicityFollow,
+  enqueueSubjectMutation,
+  type MultiplicityActionState,
+  removeRecords,
+  restoreRecords,
+} from '#/multiplicity'
 import type * as bsky from '#/types/bsky'
 import {
   ProgressGuideAction,
   useProgressGuideControls,
 } from '../shell/progress-guide'
 import {RQKEY_ROOT as RQKEY_LIST_CONVOS} from './messages/list-conversations'
+import {ACTOR_MULTIPLICITY_RQKEY, updateActorMultiplicity} from './multiplicity'
 import {RQKEY as RQKEY_MY_BLOCKED} from './my-blocked-accounts'
 import {RQKEY as RQKEY_MY_MUTED} from './my-muted-accounts'
 
@@ -253,8 +264,8 @@ export function useProfileFollowMutationQueue(
   const agent = useAgent()
   const queryClient = useQueryClient()
   const {currentAccount} = useSession()
+  const viewerDid = currentAccount?.did ?? ''
   const did = profile.did
-  const initialFollowingUri = profile.viewer?.following
   const followMutation = useProfileFollowMutation(
     logContext,
     profile,
@@ -262,108 +273,155 @@ export function useProfileFollowMutationQueue(
     contextProfileDid,
   )
   const unfollowMutation = useProfileUnfollowMutation(logContext)
+  const fallback = useMemo(
+    () => ({
+      follow: createFallbackAction(
+        profile.viewer?.following ? 1 : 0,
+        profile.viewer?.following,
+      ),
+    }),
+    [profile.viewer?.following],
+  )
 
-  const queueToggle = useToggleMutationQueue({
-    initialState: initialFollowingUri,
-    runMutation: async (prevFollowingUri, shouldFollow) => {
-      if (shouldFollow) {
-        const {uri} = await followMutation.mutateAsync({
-          did,
-        })
-        userActionHistory.follow([did])
-        return uri
-      } else {
-        if (prevFollowingUri) {
-          await unfollowMutation.mutateAsync({
-            did,
-            followUri: prevFollowingUri,
-          })
-          userActionHistory.unfollow([did])
-        }
-        return undefined
-      }
-    },
-    onSuccess(finalFollowingUri) {
-      // finalize
-      updateProfileShadow(queryClient, did, {
-        followingUri: finalFollowingUri,
-      })
+  const syncBinaryFollowingState = useCallback(
+    (state: MultiplicityActionState) => {
+      const followingUri = state.viewerRecordUris[0]
+      updateProfileShadow(queryClient, did, {followingUri})
 
-      // Optimistically update profile follows cache for avatar displays
-      if (currentAccount?.did) {
-        type FollowsQueryData =
-          InfiniteData<AppBskyGraphGetFollows.OutputSchema>
-        queryClient.setQueryData<FollowsQueryData>(
-          PROFILE_FOLLOWS_RQKEY(currentAccount.did),
-          old => {
-            if (!old?.pages?.[0]) return old
-            if (finalFollowingUri) {
-              // Add the followed profile to the beginning
-              const alreadyExists = old.pages[0].follows.some(
-                f => f.did === profile.did,
-              )
-              if (alreadyExists) return old
-              return {
-                ...old,
-                pages: [
-                  {
-                    ...old.pages[0],
-                    follows: [
-                      profile as AppBskyActorDefs.ProfileView,
-                      ...old.pages[0].follows,
-                    ],
-                  },
-                  ...old.pages.slice(1),
-                ],
-              }
-            } else {
-              // Remove the unfollowed profile
-              return {
-                ...old,
-                pages: old.pages.map(page => ({
-                  ...page,
-                  follows: page.follows.filter(f => f.did !== profile.did),
-                })),
-              }
+      if (!currentAccount?.did) return
+      type FollowsQueryData = InfiniteData<AppBskyGraphGetFollows.OutputSchema>
+      queryClient.setQueryData<FollowsQueryData>(
+        PROFILE_FOLLOWS_RQKEY(currentAccount.did),
+        old => {
+          if (!old?.pages?.[0]) return old
+          if (followingUri) {
+            const alreadyExists = old.pages[0].follows.some(
+              item => item.did === profile.did,
+            )
+            if (alreadyExists) return old
+            return {
+              ...old,
+              pages: [
+                {
+                  ...old.pages[0],
+                  follows: [
+                    profile as AppBskyActorDefs.ProfileView,
+                    ...old.pages[0].follows,
+                  ],
+                },
+                ...old.pages.slice(1),
+              ],
             }
-          },
-        )
-      }
+          }
+          return {
+            ...old,
+            pages: old.pages.map(page => ({
+              ...page,
+              follows: page.follows.filter(item => item.did !== profile.did),
+            })),
+          }
+        },
+      )
+    },
+    [currentAccount?.did, did, profile, queryClient],
+  )
 
-      if (finalFollowingUri) {
+  const updateFollow = useCallback(
+    (update: (state: MultiplicityActionState) => MultiplicityActionState) => {
+      let next = fallback.follow
+      updateActorMultiplicity(queryClient, viewerDid, did, fallback, state => {
+        next = update(state.follow)
+        return {...state, follow: next}
+      })
+      syncBinaryFollowingState(next)
+    },
+    [did, fallback, queryClient, syncBinaryFollowingState, viewerDid],
+  )
+
+  const getFollow = useCallback(() => {
+    return (
+      queryClient.getQueryData<ActorMultiplicityState>(
+        ACTOR_MULTIPLICITY_RQKEY(viewerDid, did),
+      )?.follow ?? fallback.follow
+    )
+  }, [did, fallback.follow, queryClient, viewerDid])
+
+  const subjectKey = `follow:${did}`
+  const queueFollow = useCallback(() => {
+    const pendingUri = `pending:follow:${++nextPendingFollowId}`
+    updateFollow(state => addPendingRecord(state, pendingUri))
+    return enqueueSubjectMutation(subjectKey, async () => {
+      try {
+        const {uri} = await followMutation.mutateAsync({did})
+        updateFollow(state => confirmPendingRecord(state, pendingUri, uri))
+        userActionHistory.follow([did])
         void agent.app.bsky.graph
-          .getSuggestedFollowsByActor({
-            actor: did,
-          })
+          .getSuggestedFollowsByActor({actor: did})
           .then(res => {
             const dids = res.data.suggestions
-              .filter(a => !a.viewer?.following)
-              .map(a => a.did)
+              .filter(item => !item.viewer?.following)
+              .map(item => item.did)
               .slice(0, 8)
             userActionHistory.followSuggestion(dids)
           })
+        return uri
+      } catch (error) {
+        updateFollow(state => removeRecords(state, [pendingUri]))
+        throw error
       }
-    },
-  })
-
-  const queueFollow = useCallback(() => {
-    // optimistically update
-    updateProfileShadow(queryClient, did, {
-      followingUri: 'pending',
     })
-    return queueToggle(true)
-  }, [queryClient, did, queueToggle])
+  }, [agent, did, followMutation, subjectKey, updateFollow])
 
-  const queueUnfollow = useCallback(() => {
-    // optimistically update
-    updateProfileShadow(queryClient, did, {
-      followingUri: undefined,
-    })
-    return queueToggle(false)
-  }, [queryClient, did, queueToggle])
+  const queueUnfollow = useCallback(
+    () =>
+      enqueueSubjectMutation(subjectKey, async () => {
+        const uri = getFollow().viewerRecordUris.find(
+          recordUri => !recordUri.startsWith('pending:'),
+        )
+        if (!uri) return undefined
+        updateFollow(state => removeRecords(state, [uri]))
+        try {
+          await unfollowMutation.mutateAsync({did, followUri: uri})
+          userActionHistory.unfollow([did])
+          return uri
+        } catch (error) {
+          updateFollow(state => restoreRecords(state, [uri]))
+          throw error
+        }
+      }),
+    [did, getFollow, subjectKey, unfollowMutation, updateFollow],
+  )
 
-  return [queueFollow, queueUnfollow] as const
+  const queueUnfollowAll = useCallback(
+    () =>
+      enqueueSubjectMutation(subjectKey, async () => {
+        const uris = getFollow().viewerRecordUris.filter(
+          uri => !uri.startsWith('pending:'),
+        )
+        if (uris.length === 0) return []
+        updateFollow(state => removeRecords(state, uris))
+        const results = await Promise.allSettled(
+          uris.map(followUri => unfollowMutation.mutateAsync({did, followUri})),
+        )
+        const failed = uris.filter(
+          (_, index) => results[index]?.status === 'rejected',
+        )
+        if (failed.length > 0) {
+          updateFollow(state => restoreRecords(state, failed))
+          throw new Error(
+            `Removed ${uris.length - failed.length} of ${uris.length} follow records`,
+          )
+        }
+        userActionHistory.unfollow([did])
+        return uris
+      }),
+    [did, getFollow, subjectKey, unfollowMutation, updateFollow],
+  )
+
+  return [queueFollow, queueUnfollow, queueUnfollowAll] as const
 }
+
+let nextPendingFollowId = 0
 
 function useProfileFollowMutation(
   logContext: Metrics['profile:follow']['logContext'],

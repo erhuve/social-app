@@ -990,13 +990,13 @@
   },
   "src/screens/PostThread/components/ThreadItemAnchorFollowButton.tsx": {
     "typescript/no-explicit-any": {
-      "count": 2
+      "count": 1
     },
     "typescript/no-unsafe-call": {
-      "count": 2
+      "count": 1
     },
     "typescript/no-unsafe-member-access": {
-      "count": 4
+      "count": 2
     }
   },
   "src/screens/PostThread/index.tsx": {
@@ -1703,13 +1703,13 @@
   },
   "src/view/com/notifications/NotificationFeedItem.tsx": {
     "typescript/no-explicit-any": {
-      "count": 3
+      "count": 2
     },
     "typescript/no-misused-promises": {
-      "count": 3
+      "count": 2
     },
     "typescript/no-unsafe-member-access": {
-      "count": 2
+      "count": 1
     }
   },
   "src/view/com/pager/Pager.tsx": {

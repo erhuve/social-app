@@ -72,6 +72,7 @@ import {
   useFeedFeedbackContext,
 } from '#/state/feed-feedback'
 import {useFeedInfo} from '#/state/queries/feed'
+import {useActorMultiplicity} from '#/state/queries/multiplicity'
 import {usePostLikeMutationQueue} from '#/state/queries/post'
 import {
   type FeedPostSliceItem,
@@ -781,10 +782,8 @@ function Overlay({
   const seekingAnimationSV = useSharedValue(0)
 
   const profile = useProfileShadow(post.author)
-  const [queueFollow, queueUnfollow] = useProfileFollowMutationQueue(
-    profile,
-    'ImmersiveVideo',
-  )
+  const multiplicity = useActorMultiplicity(profile)
+  const [queueFollow] = useProfileFollowMutationQueue(profile, 'ImmersiveVideo')
 
   const rkey = new AtUri(post.uri).rkey
   const record = bsky.dangerousIsType<AppBskyFeedPost.Record>(
@@ -895,26 +894,29 @@ function Overlay({
                     <Button
                       label={
                         profile.viewer?.following
-                          ? l`Following ${handle}`
+                          ? l`Follow ${handle} again`
                           : l`Follow ${handle}`
                       }
                       accessibilityHint={
-                        profile.viewer?.following ? l`Unfollows the user` : ''
+                        profile.viewer?.following
+                          ? l`Adds another follow for this user`
+                          : ''
                       }
                       size="small"
                       variant="solid"
                       color="secondary_inverted"
                       style={[a.mb_xs]}
-                      onPress={() =>
-                        profile.viewer?.following
-                          ? void queueUnfollow()
-                          : void queueFollow()
-                      }>
+                      onPress={() => void queueFollow()}>
                       {!!profile.viewer?.following && (
                         <ButtonIcon icon={CheckIcon} />
                       )}
                       <ButtonText>
-                        {profile.viewer?.following ? (
+                        {multiplicity.follow.viewerRecordUris.length > 1 ? (
+                          <Trans>
+                            Following ×
+                            {multiplicity.follow.viewerRecordUris.length}
+                          </Trans>
+                        ) : profile.viewer?.following ? (
                           <Trans>Following</Trans>
                         ) : (
                           <Trans>Follow</Trans>

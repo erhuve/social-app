@@ -34,6 +34,7 @@ import {
   KnownFollowers,
   shouldShowKnownFollowers,
 } from '#/components/KnownFollowers'
+import {MultiplicityRemoveDialog} from '#/components/PostControls/MultiplicityRemoveDialog'
 import * as Prompt from '#/components/Prompt'
 import {RichText} from '#/components/RichText'
 import * as Toast from '#/components/Toast'
@@ -227,19 +228,19 @@ export function HeaderStandardButtons({
   const multiplicity = useActorMultiplicity(profile)
   const playHaptic = useHaptics()
   const requireAuth = useRequireAuth()
-  const [queueFollow, queueUnfollow] = useProfileFollowMutationQueue(
-    profile,
-    'ProfileHeader',
-  )
+  const [queueFollow, queueUnfollow, queueUnfollowAll] =
+    useProfileFollowMutationQueue(profile, 'ProfileHeader')
   const [, queueUnblock] = useProfileBlockMutationQueue(profile)
   const editProfileControl = useDialogControl()
   const inviteFriendsControl = useDialogControl()
   const unblockPromptControl = Prompt.usePromptControl()
+  const removeFollowControl = useDialogControl()
 
   const isMe = currentAccount?.did === profile.did
+  const viewerFollowCount = multiplicity.follow.viewerRecordUris.length
   const followingLabel =
-    multiplicity.follow.count > 1
-      ? _(msg`Following ×${multiplicity.follow.count}`)
+    viewerFollowCount > 1
+      ? _(msg`Following ×${viewerFollowCount}`)
       : _(msg`Following`)
 
   const onPressFollow = () => {
@@ -268,31 +269,16 @@ export function HeaderStandardButtons({
     })
   }
 
-  const onPressUnfollow = () => {
-    playHaptic()
-    requireAuth(async () => {
-      try {
-        await queueUnfollow()
-        onUnfollow?.()
-        Toast.show(
-          _(
-            msg`No longer following ${sanitizeDisplayName(
-              profile.displayName || profile.handle,
-              moderation.ui('displayName'),
-            )}`,
-          ),
-          {type: 'default'},
-        )
-      } catch (err) {
-        const e = err as Error
-        if (e?.name !== 'AbortError') {
-          logger.error('Failed to unfollow', {message: String(e)})
-          Toast.show(_(msg`There was an issue! ${e.toString()}`), {
-            type: 'error',
-          })
-        }
-      }
-    })
+  const removeOneFollow = async () => {
+    const result = await queueUnfollow()
+    onUnfollow?.()
+    return result
+  }
+
+  const removeAllFollows = async () => {
+    const result = await queueUnfollowAll()
+    onUnfollow?.()
+    return result
   }
 
   const unblockAccount = async () => {
@@ -392,22 +378,25 @@ export function HeaderStandardButtons({
             </>
           )}
 
-          {(!minimal || !profile.viewer?.following) && (
+          {(!minimal || viewerFollowCount === 0) && (
             <Button
-              testID={profile.viewer?.following ? 'unfollowBtn' : 'followBtn'}
+              testID={viewerFollowCount > 0 ? 'followingBtn' : 'followBtn'}
               size="small"
-              color={profile.viewer?.following ? 'secondary' : 'primary'}
+              color={viewerFollowCount > 0 ? 'secondary' : 'primary'}
               label={
-                profile.viewer?.following
-                  ? _(msg`Unfollow ${profile.handle}`)
+                viewerFollowCount > 0
+                  ? _(msg`Follow ${profile.handle} again`)
                   : _(msg`Follow ${profile.handle}`)
               }
-              onPress={
-                profile.viewer?.following ? onPressUnfollow : onPressFollow
+              onPress={onPressFollow}
+              onLongPress={
+                viewerFollowCount > 0
+                  ? () => removeFollowControl.open()
+                  : undefined
               }>
-              {!profile.viewer?.following && <ButtonIcon icon={Plus} />}
+              {viewerFollowCount === 0 && <ButtonIcon icon={Plus} />}
               <ButtonText>
-                {profile.viewer?.following ? (
+                {viewerFollowCount > 0 ? (
                   followingLabel
                 ) : profile.viewer?.followedBy ? (
                   <Trans>Follow back</Trans>
@@ -419,6 +408,13 @@ export function HeaderStandardButtons({
           )}
         </>
       ) : null}
+      <MultiplicityRemoveDialog
+        control={removeFollowControl}
+        actionLabel={_(msg`Remove follows`)}
+        ownedCount={viewerFollowCount}
+        onRemoveOne={removeOneFollow}
+        onRemoveAll={removeAllFollows}
+      />
       <ProfileMenu profile={profile} />
 
       <Prompt.Basic
