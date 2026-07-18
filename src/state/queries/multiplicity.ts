@@ -68,6 +68,7 @@ export function usePostMultiplicity(
     },
     enabled: Boolean(adapter && viewerDid),
     staleTime: STALE.SECONDS.FIFTEEN,
+    refetchInterval: STALE.SECONDS.THIRTY,
     retry: 1,
   })
 
@@ -122,6 +123,7 @@ export function useActorMultiplicity(
     },
     enabled: Boolean(adapter && viewerDid),
     staleTime: STALE.SECONDS.FIFTEEN,
+    refetchInterval: STALE.SECONDS.THIRTY,
     retry: 1,
   })
 
