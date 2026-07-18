@@ -1,0 +1,58 @@
+name: Meadow Web Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: '${{ github.workflow }}-${{ github.ref }}'
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  CI: '1'
+  EXPO_PUBLIC_MULTIPLICITY_SERVICE_URL: https://multiplicity-service-hatsunemiku.zocomputer.io
+  EXPO_PUBLIC_MULTIPLICITY_SERVICE_DID: did:web:multiplicity-service-hatsunemiku.zocomputer.io
+  EXPO_PUBLIC_MULTIPLICITY_FEED_URI: at://did:plc:m6ueqhacjannzmreidcijoj2/app.bsky.feed.generator/raffle
+
+jobs:
+  build:
+    name: Build immutable web artifact
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+        with:
+          version: 11.13.1
+      - name: Install Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: package.json
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Compile translations
+        run: pnpm intl:compile
+      - name: Verify SPA serving behavior
+        run: python3 scripts/serve_web_spa_test.py
+      - name: Build production web client
+        run: pnpm build-web
+      - name: Package commit-addressed artifact
+        run: scripts/package_web_release.sh "$GITHUB_SHA"
+      - name: Verify packaged artifact
+        run: (cd artifacts && sha256sum -c "meadow-web-$GITHUB_SHA.tar.gz.sha256")
+      - name: Upload release artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: meadow-web-${{ github.sha }}
+          path: |
+            artifacts/meadow-web-${{ github.sha }}.tar.gz
+            artifacts/meadow-web-${{ github.sha }}.tar.gz.sha256
+          if-no-files-found: error
+          retention-days: 90
