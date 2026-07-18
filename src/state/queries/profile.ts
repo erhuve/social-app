@@ -40,6 +40,9 @@ import {type Metrics, toClout} from '#/analytics/metrics'
 import {
   type ActorMultiplicityState,
   addPendingRecord,
+  assertCanAddMultiplicityRecord,
+  assertMultiplicityReconciliationCapacity,
+  assertSubjectMutationCapacity,
   commitMultiplicityRemoval,
   confirmMultiplicityAddition,
   confirmPendingRecord,
@@ -54,6 +57,7 @@ import {
   restoreRecords,
   rollbackMultiplicityAddition,
   rollbackMultiplicityRemoval,
+  settleMutationBatch,
 } from '#/multiplicity'
 import type * as bsky from '#/types/bsky'
 import {
@@ -361,6 +365,15 @@ export function useProfileFollowMutationQueue(
     'follow',
   )
   const queueFollow = useCallback(() => {
+    try {
+      assertSubjectMutationCapacity(subjectKey)
+      assertMultiplicityReconciliationCapacity(reconciliationKey)
+      assertCanAddMultiplicityRecord(getFollow())
+    } catch (error) {
+      return Promise.reject(
+        error instanceof Error ? error : new Error('Unable to queue action'),
+      )
+    }
     const pendingUri = `pending:follow:${++nextPendingFollowId}`
     markMultiplicityAddition(reconciliationKey, pendingUri)
     updateFollow(state => addPendingRecord(state, pendingUri))
@@ -386,7 +399,15 @@ export function useProfileFollowMutationQueue(
         throw error
       }
     })
-  }, [agent, did, followMutation, reconciliationKey, subjectKey, updateFollow])
+  }, [
+    agent,
+    did,
+    followMutation,
+    getFollow,
+    reconciliationKey,
+    subjectKey,
+    updateFollow,
+  ])
 
   const queueUnfollow = useCallback(
     () =>
@@ -432,8 +453,8 @@ export function useProfileFollowMutationQueue(
         if (uris.length === 0) return []
         markMultiplicityRemoval(reconciliationKey, uris)
         updateFollow(state => removeRecords(state, uris))
-        const results = await Promise.allSettled(
-          uris.map(followUri => unfollowMutation.mutateAsync({did, followUri})),
+        const results = await settleMutationBatch(uris, followUri =>
+          unfollowMutation.mutateAsync({did, followUri}),
         )
         const failed = uris.filter(
           (_, index) => results[index]?.status === 'rejected',

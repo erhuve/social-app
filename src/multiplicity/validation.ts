@@ -2,6 +2,7 @@ import {AtUri} from '@atproto/api'
 
 import {
   type ActorMultiplicityState,
+  MAX_VIEWER_RECORD_URIS,
   type MultiplicityActionState,
   type MultiplicityBatchRequest,
   type MultiplicityBatchResponse,
@@ -30,6 +31,9 @@ function cloneActionState(
     state.viewerRecordUris.some(uri => typeof uri !== 'string')
   ) {
     throw new Error('Viewer record URIs must be an array of strings')
+  }
+  if (state.viewerRecordUris.length > MAX_VIEWER_RECORD_URIS) {
+    throw new Error(`Viewer record URIs must contain at most 1000 items`)
   }
   if (new Set(state.viewerRecordUris).size !== state.viewerRecordUris.length) {
     throw new Error('Viewer record URIs must be unique')

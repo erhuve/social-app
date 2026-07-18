@@ -1,5 +1,6 @@
 export {
   addPendingRecord,
+  assertCanAddMultiplicityRecord,
   confirmPendingRecord,
   removeRecords,
   restoreRecords,
@@ -12,13 +13,16 @@ export type {HttpMultiplicityAdapterOptions} from './http-adapter'
 export {createHttpMultiplicityAdapter} from './http-adapter'
 export {
   applyMultiplicityOverlay,
+  assertMultiplicityReconciliationCapacity,
   commitMultiplicityRemoval,
   confirmMultiplicityAddition,
   markMultiplicityAddition,
   markMultiplicityRemoval,
+  MAX_RECONCILIATION_RECORDS_PER_OVERLAY,
   mergeMultiplicityAction,
   multiplicityReconciliationKey,
   reconcileMultiplicityAction,
+  REMOVAL_CONVERGENCE_GRACE_MS,
   resetMultiplicityReconciliationForTest,
   rollbackMultiplicityAddition,
   rollbackMultiplicityRemoval,
@@ -31,7 +35,11 @@ export {
   deleteMultiplicityLike,
   deleteMultiplicityRepost,
 } from './records'
-export {enqueueSubjectMutation} from './subject-queue'
+export {
+  assertSubjectMutationCapacity,
+  enqueueSubjectMutation,
+  settleMutationBatch,
+} from './subject-queue'
 export type {
   ActorMultiplicityState,
   MultiplicityActionState,
@@ -40,3 +48,4 @@ export type {
   MultiplicityBatchResponse,
   PostMultiplicityState,
 } from './types'
+export {MAX_VIEWER_RECORD_URIS} from './types'

@@ -1,9 +1,16 @@
-import {type MultiplicityActionState} from './types'
+import {MAX_VIEWER_RECORD_URIS, type MultiplicityActionState} from './types'
+
+export function assertCanAddMultiplicityRecord(state: MultiplicityActionState) {
+  if (state.viewerRecordUris.length >= MAX_VIEWER_RECORD_URIS) {
+    throw new Error('Too many pending actions. Please wait and try again.')
+  }
+}
 
 export function addPendingRecord(
   state: MultiplicityActionState,
   pendingUri: string,
 ): MultiplicityActionState {
+  assertCanAddMultiplicityRecord(state)
   return {
     count: state.count + 1,
     viewerRecordUris: [pendingUri, ...state.viewerRecordUris],
@@ -49,6 +56,9 @@ export function restoreRecords(
   const restored = recordUris.filter(uri => !existing.has(uri))
   return {
     count: state.count + restored.length,
-    viewerRecordUris: [...restored, ...state.viewerRecordUris],
+    viewerRecordUris: [...restored, ...state.viewerRecordUris].slice(
+      0,
+      MAX_VIEWER_RECORD_URIS,
+    ),
   }
 }

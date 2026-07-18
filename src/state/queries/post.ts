@@ -16,6 +16,9 @@ import {useAnalytics} from '#/analytics'
 import {type Metrics, toClout} from '#/analytics/metrics'
 import {
   addPendingRecord,
+  assertCanAddMultiplicityRecord,
+  assertMultiplicityReconciliationCapacity,
+  assertSubjectMutationCapacity,
   commitMultiplicityRemoval,
   confirmMultiplicityAddition,
   confirmPendingRecord,
@@ -32,6 +35,7 @@ import {
   restoreRecords,
   rollbackMultiplicityAddition,
   rollbackMultiplicityRemoval,
+  settleMutationBatch,
 } from '#/multiplicity'
 import {useIsThreadMuted, useSetThreadMute} from '../cache/thread-mutes'
 import {POST_MULTIPLICITY_RQKEY, updatePostMultiplicity} from './multiplicity'
@@ -329,6 +333,15 @@ function usePostMultiplicityMutationQueue({
   }, [action, fallback, post.uri, queryClient, viewerDid])
 
   const queueCreate = useCallback(() => {
+    try {
+      assertSubjectMutationCapacity(subjectKey)
+      assertMultiplicityReconciliationCapacity(reconciliationKey)
+      assertCanAddMultiplicityRecord(getAction())
+    } catch (error) {
+      return Promise.reject(
+        error instanceof Error ? error : new Error('Unable to queue action'),
+      )
+    }
     const pendingUri = `pending:${action}:${++nextPendingRecordId}`
     markMultiplicityAddition(reconciliationKey, pendingUri)
     updateAction(state => addPendingRecord(state, pendingUri))
@@ -348,6 +361,7 @@ function usePostMultiplicityMutationQueue({
   }, [
     action,
     createRecord,
+    getAction,
     onCreate,
     reconciliationKey,
     subjectKey,
@@ -394,7 +408,7 @@ function usePostMultiplicityMutationQueue({
         if (uris.length === 0) return []
         markMultiplicityRemoval(reconciliationKey, uris)
         updateAction(state => removeRecords(state, uris))
-        const results = await Promise.allSettled(uris.map(deleteRecord))
+        const results = await settleMutationBatch(uris, deleteRecord)
         const failed = uris.filter(
           (_, index) => results[index]?.status === 'rejected',
         )

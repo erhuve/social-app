@@ -99,6 +99,25 @@ describe('createHttpMultiplicityAdapter', () => {
       message: 'array of strings',
     },
     {
+      name: 'unbounded viewer records',
+      response: {
+        ...serviceResponse(),
+        posts: {
+          [POST_URI]: {
+            like: {
+              count: 1_001,
+              viewerRecordUris: Array.from(
+                {length: 1_001},
+                (_, index) => `at://did:plc:alice/app.bsky.feed.like/${index}`,
+              ),
+            },
+            repost: {count: 0, viewerRecordUris: []},
+          },
+        },
+      },
+      message: 'at most 1000',
+    },
+    {
       name: 'records owned by another viewer',
       response: {
         ...serviceResponse(),

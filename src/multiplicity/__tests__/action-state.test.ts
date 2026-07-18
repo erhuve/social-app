@@ -4,6 +4,7 @@ import {
   removeRecords,
   restoreRecords,
 } from '../action-state'
+import {MAX_VIEWER_RECORD_URIS} from '../types'
 
 describe('multiplicity action state', () => {
   const initial = {
@@ -31,6 +32,21 @@ describe('multiplicity action state', () => {
         'at://viewer/like/old',
       ],
     })
+  })
+
+  it('rejects an optimistic record above the owned-record limit', () => {
+    expect(() =>
+      addPendingRecord(
+        {
+          count: MAX_VIEWER_RECORD_URIS,
+          viewerRecordUris: Array.from(
+            {length: MAX_VIEWER_RECORD_URIS},
+            (_, index) => `at://viewer/like/${index}`,
+          ),
+        },
+        'pending:overflow',
+      ),
+    ).toThrow('Too many pending actions')
   })
 
   it('rolls back one pending record without disturbing other records', () => {
@@ -78,5 +94,20 @@ describe('multiplicity action state', () => {
       count: 4,
       viewerRecordUris: ['at://viewer/like/new', 'at://viewer/like/old'],
     })
+  })
+
+  it('bounds rollback restoration while prioritizing restored records', () => {
+    const viewerRecordUris = Array.from(
+      {length: MAX_VIEWER_RECORD_URIS},
+      (_, index) => `at://viewer/like/${index}`,
+    )
+    const restored = 'at://viewer/like/restored'
+    const result = restoreRecords(
+      {count: MAX_VIEWER_RECORD_URIS, viewerRecordUris},
+      [restored],
+    )
+    expect(result.count).toBe(MAX_VIEWER_RECORD_URIS + 1)
+    expect(result.viewerRecordUris).toHaveLength(MAX_VIEWER_RECORD_URIS)
+    expect(result.viewerRecordUris[0]).toBe(restored)
   })
 })
