@@ -82,9 +82,12 @@ function cloneActionState(
   }
   if (
     state.extraCount !== undefined &&
-    (state.extraCount as number) < Math.max(0, state.viewerRecordUris.length - 1)
+    (state.extraCount as number) <
+      Math.max(0, state.viewerRecordUris.length - 1)
   ) {
-    throw new Error('Multiplicity extra count cannot omit repeated viewer records')
+    throw new Error(
+      'Multiplicity extra count cannot omit repeated viewer records',
+    )
   }
   return {
     count: state.count as number,

@@ -31,7 +31,7 @@ describe('multiplicity reconciliation', () => {
     ).toEqual({count: 100, viewerRecordUris: [URI]})
   })
 
-  it('adds indexed repeated records to AppView\'s actor-collapsed count', () => {
+  it("adds indexed repeated records to AppView's actor-collapsed count", () => {
     expect(
       mergeMultiplicityAction(
         {count: 19, extraCount: 17, viewerRecordUris: [URI]},
