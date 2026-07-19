@@ -11,6 +11,7 @@ import {
   createBatchedMultiplicityAdapter,
   createFallbackAction,
   createHttpMultiplicityAdapter,
+  createPublicHttpMultiplicityAdapter,
   MULTIPLICITY_BATCH_LXM,
   type MultiplicityAdapter,
   multiplicityReconciliationKey,
@@ -26,8 +27,15 @@ const serviceAuthAudience = MULTIPLICITY_SERVICE_URL
   : null
 if (MULTIPLICITY_SERVICE_URL) requireMultiplicityCapabilities()
 const adapters = new WeakMap<AtpAgent, MultiplicityAdapter>()
+const publicAdapter = MULTIPLICITY_SERVICE_URL
+  ? createBatchedMultiplicityAdapter(
+      createPublicHttpMultiplicityAdapter({
+        baseUrl: MULTIPLICITY_SERVICE_URL,
+      }),
+    )
+  : undefined
 
-function getMultiplicityAdapter(
+function getAuthenticatedMultiplicityAdapter(
   agent: AtpAgent,
   viewerDid: string,
 ): MultiplicityAdapter | undefined {
@@ -75,7 +83,9 @@ export function usePostMultiplicity(
   const agent = useAgent()
   const {currentAccount} = useSession()
   const viewerDid = currentAccount?.did ?? ''
-  const adapter = getMultiplicityAdapter(agent, viewerDid)
+  const adapter = viewerDid
+    ? getAuthenticatedMultiplicityAdapter(agent, viewerDid)
+    : publicAdapter
   const fallback = {
     like: createFallbackAction(post.likeCount, post.viewer?.like),
     repost: createFallbackAction(post.repostCount, post.viewer?.repost),
@@ -103,7 +113,7 @@ export function usePostMultiplicity(
         ),
       }
     },
-    enabled: Boolean(adapter && viewerDid),
+    enabled: Boolean(adapter),
     staleTime: STALE.SECONDS.FIFTEEN,
     refetchInterval: STALE.SECONDS.THIRTY,
     retry: 1,
@@ -130,7 +140,7 @@ export function useActorMultiplicity(
   const agent = useAgent()
   const {currentAccount} = useSession()
   const viewerDid = currentAccount?.did ?? ''
-  const adapter = getMultiplicityAdapter(agent, viewerDid)
+  const adapter = getAuthenticatedMultiplicityAdapter(agent, viewerDid)
   const fallback = {
     follow: createFallbackAction(
       profile.viewer?.following ? 1 : 0,

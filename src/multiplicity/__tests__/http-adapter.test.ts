@@ -3,7 +3,10 @@ import {
   MAX_MULTIPLICITY_CAPABILITY_AGE_MS,
   resetMultiplicityCapabilitiesForTest,
 } from '../capabilities'
-import {createHttpMultiplicityAdapter} from '../http-adapter'
+import {
+  createHttpMultiplicityAdapter,
+  createPublicHttpMultiplicityAdapter,
+} from '../http-adapter'
 
 const POST_URI = 'at://did:plc:bob/app.bsky.feed.post/one'
 const ACTOR_DID = 'did:plc:bob'
@@ -353,5 +356,67 @@ describe('createHttpMultiplicityAdapter', () => {
     expect(() =>
       createHttpMultiplicityAdapter({baseUrl: 'file:///tmp/index'}),
     ).toThrow('HTTP or HTTPS')
+  })
+})
+
+describe('createPublicHttpMultiplicityAdapter', () => {
+  beforeEach(() => resetMultiplicityCapabilitiesForTest())
+
+  it('requests counts without viewer identity or authorization', async () => {
+    const fetch = jest.fn(() =>
+      Promise.resolve(
+        Response.json({
+          ...serviceResponse(),
+          posts: {
+            [POST_URI]: {
+              like: {count: 3, extraCount: 2, viewerRecordUris: []},
+              repost: {count: 0, viewerRecordUris: []},
+            },
+          },
+        }),
+      ),
+    )
+    const adapter = createPublicHttpMultiplicityAdapter({
+      baseUrl: 'https://multiplicity.example/base/',
+      fetch,
+    })
+
+    const result = await adapter.getBatch({
+      viewerDid: '',
+      postUris: [POST_URI],
+      actorDids: [],
+    })
+
+    expect(fetch).toHaveBeenCalledWith(
+      'https://multiplicity.example/base/v1/multiplicity/public-batch',
+      {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({postUris: [POST_URI], actorDids: []}),
+      },
+    )
+    expect(result.posts[POST_URI].like).toEqual({
+      count: 3,
+      extraCount: 2,
+      viewerRecordUris: [],
+    })
+  })
+
+  it('rejects viewer-owned record URIs from the public endpoint', async () => {
+    const adapter = createPublicHttpMultiplicityAdapter({
+      baseUrl: 'https://multiplicity.example',
+      fetch: () => Promise.resolve(Response.json(serviceResponse())),
+    })
+
+    await expect(
+      adapter.getBatch({
+        viewerDid: VIEWER_DID,
+        postUris: [POST_URI],
+        actorDids: [],
+      }),
+    ).rejects.toThrow('requested viewer')
   })
 })

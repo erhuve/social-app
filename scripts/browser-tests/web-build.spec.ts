@@ -50,10 +50,68 @@ test('production home route hydrates', async ({page}) => {
 test('direct post deep link hydrates with root-relative bundles', async ({
   page,
 }) => {
+  const publicBatches: Array<{
+    body: {postUris: string[]; actorDids: string[]; viewerDid?: string}
+    authorization?: string
+  }> = []
+  await page.route(
+    'https://multiplicity-service-hatsunemiku.zocomputer.io/v1/multiplicity/public-batch',
+    async route => {
+      const body = route.request().postDataJSON() as {
+        postUris: string[]
+        actorDids: string[]
+        viewerDid?: string
+      }
+      publicBatches.push({
+        body,
+        authorization: route.request().headers().authorization,
+      })
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({
+          posts: Object.fromEntries(
+            body.postUris.map(uri => [
+              uri,
+              {
+                like: {count: 0, extraCount: 0, viewerRecordUris: []},
+                repost: {count: 0, extraCount: 0, viewerRecordUris: []},
+              },
+            ]),
+          ),
+          actors: Object.fromEntries(
+            body.actorDids.map(did => [
+              did,
+              {follow: {count: 0, extraCount: 0, viewerRecordUris: []}},
+            ]),
+          ),
+          capabilities: {
+            generation: 1,
+            writesEnabled: true,
+            feedEnabled: true,
+          },
+        }),
+      })
+    },
+  )
   await expectAppToHydrate(page, '/profile/agnoster.net/post/3mqubzdvkdc2a')
   await expect(page).toHaveTitle(/ — Meadow$/)
   expect(new URL(page.url()).pathname).toBe(
     '/profile/agnoster.net/post/3mqubzdvkdc2a',
+  )
+  await expect
+    .poll(() =>
+      publicBatches.some(batch =>
+        batch.body.postUris.includes(
+          'at://did:plc:r2bjwiwlhmo26hh2sz27fqf3/app.bsky.feed.post/3mqubzdvkdc2a',
+        ),
+      ),
+    )
+    .toBe(true)
+  expect(publicBatches.every(batch => batch.body.viewerDid === undefined)).toBe(
+    true,
+  )
+  expect(publicBatches.every(batch => batch.authorization === undefined)).toBe(
+    true,
   )
 })
 

@@ -16,9 +16,13 @@ export {
 export type {FakeMultiplicitySeed} from './fake-adapter'
 export {createFakeMultiplicityAdapter} from './fake-adapter'
 export {createFallbackAction} from './fallback'
-export type {HttpMultiplicityAdapterOptions} from './http-adapter'
+export type {
+  HttpMultiplicityAdapterOptions,
+  PublicHttpMultiplicityAdapterOptions,
+} from './http-adapter'
 export {
   createHttpMultiplicityAdapter,
+  createPublicHttpMultiplicityAdapter,
   MULTIPLICITY_BATCH_LXM,
 } from './http-adapter'
 export {
