@@ -50,6 +50,8 @@ test('production home route hydrates', async ({page}) => {
 test('direct post deep link hydrates with root-relative bundles', async ({
   page,
 }) => {
+  const targetPostUri =
+    'at://did:plc:r2bjwiwlhmo26hh2sz27fqf3/app.bsky.feed.post/3mqubzdvkdc2a'
   const publicBatches: Array<{
     body: {postUris: string[]; actorDids: string[]; viewerDid?: string}
     authorization?: string
@@ -73,7 +75,14 @@ test('direct post deep link hydrates with root-relative bundles', async ({
             body.postUris.map(uri => [
               uri,
               {
-                like: {count: 0, extraCount: 0, viewerRecordUris: []},
+                like:
+                  uri === targetPostUri
+                    ? {
+                        count: 1_000_001,
+                        extraCount: 1_000_000,
+                        viewerRecordUris: [],
+                      }
+                    : {count: 0, extraCount: 0, viewerRecordUris: []},
                 repost: {count: 0, extraCount: 0, viewerRecordUris: []},
               },
             ]),
@@ -100,11 +109,7 @@ test('direct post deep link hydrates with root-relative bundles', async ({
   )
   await expect
     .poll(() =>
-      publicBatches.some(batch =>
-        batch.body.postUris.includes(
-          'at://did:plc:r2bjwiwlhmo26hh2sz27fqf3/app.bsky.feed.post/3mqubzdvkdc2a',
-        ),
-      ),
+      publicBatches.some(batch => batch.body.postUris.includes(targetPostUri)),
     )
     .toBe(true)
   expect(publicBatches.every(batch => batch.body.viewerDid === undefined)).toBe(
@@ -113,6 +118,7 @@ test('direct post deep link hydrates with root-relative bundles', async ({
   expect(publicBatches.every(batch => batch.authorization === undefined)).toBe(
     true,
   )
+  await expect(page.getByTestId('likeCount').first()).toHaveText('1M')
 })
 
 test('missing static bundles remain 404 responses', async ({request}) => {
