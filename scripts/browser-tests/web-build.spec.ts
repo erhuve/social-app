@@ -34,7 +34,7 @@ async function expectAppToHydrate(page: Page, path: string) {
 
   const response = await page.goto(path, {waitUntil: 'domcontentloaded'})
   expect(response?.status()).toBe(200)
-  await expect(page).toHaveTitle('Meadow')
+  await expect(page).toHaveTitle(/(?:^Meadow$| — Meadow$)/)
   await expect
     .poll(() => page.locator('#root').evaluate(root => root.childElementCount))
     .toBeGreaterThan(0)
@@ -62,4 +62,27 @@ test('missing static bundles remain 404 responses', async ({request}) => {
     headers: {Accept: 'text/html'},
   })
   expect(response.status()).toBe(404)
+})
+
+test('main bundle includes Meadow policy copy', async ({request}) => {
+  const manifestResponse = await request.get('/asset-manifest.json')
+  expect(manifestResponse.status()).toBe(200)
+  const manifest = (await manifestResponse.json()) as {
+    files: Record<string, string>
+  }
+  const mainBundle = manifest.files['main.js']
+
+  expect(mainBundle).toMatch(/^\/static\/js\/main\.[a-f0-9]+\.js$/)
+  const bundleResponse = await request.get(mainBundle)
+  expect(bundleResponse.status()).toBe(200)
+  const bundle = await bundleResponse.text()
+
+  expect(bundle).toContain('Meadow public beta')
+  expect(bundle).toContain('Meadow is an independent AT Protocol client')
+  expect(bundle).toContain(
+    'label:"Meadow Public Beta Terms",children:"Public Beta Terms"',
+  )
+  expect(bundle).toContain(
+    'label:"Meadow Privacy Notice",children:"Privacy Notice"',
+  )
 })

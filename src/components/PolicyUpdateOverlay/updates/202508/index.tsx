@@ -17,34 +17,26 @@ export function Content({state}: {state: PolicyUpdateState}) {
   const handleClose = useCallback(() => state.complete(), [state])
 
   return (
-    <Overlay label={_(msg`Meadow public beta`)}>
+    <Overlay label="Meadow public beta">
       <View style={[a.align_start, a.gap_xl]}>
         <View style={[a.gap_sm]}>
           <Text style={[a.text_2xl, a.font_semi_bold, a.leading_snug]}>
-            <Trans>Meadow public beta</Trans>
+            Meadow public beta
           </Text>
           <Text style={[a.leading_snug, a.text_md]}>
-            <Trans>
-              Meadow is an independent AT Protocol client and is not operated by
-              or affiliated with Bluesky Social PBC.
-            </Trans>
+            Meadow is an independent AT Protocol client and is not operated by
+            or affiliated with Bluesky Social PBC.
           </Text>
           <Text style={[a.leading_snug, a.text_md]}>
-            <Trans>
-              Review the{' '}
-              <InlineLinkText
-                to={webLinks.tos}
-                label={_(msg`Meadow Public Beta Terms`)}>
-                Public Beta Terms
-              </InlineLinkText>{' '}
-              and{' '}
-              <InlineLinkText
-                to={webLinks.privacy}
-                label={_(msg`Meadow Privacy Notice`)}>
-                Privacy Notice
-              </InlineLinkText>
-              .
-            </Trans>
+            Review the{' '}
+            <InlineLinkText to={webLinks.tos} label="Meadow Public Beta Terms">
+              Public Beta Terms
+            </InlineLinkText>{' '}
+            and{' '}
+            <InlineLinkText to={webLinks.privacy} label="Meadow Privacy Notice">
+              Privacy Notice
+            </InlineLinkText>
+            .
           </Text>
         </View>
 
