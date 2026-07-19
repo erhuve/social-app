@@ -48,7 +48,11 @@ elif args[:2] == ["release", "download"]:
 elif args[:2] == ["attestation", "verify"]:
     pass
 elif args[:2] == ["release", "view"]:
-    print('{"isDraft":true}')
+    commit = args[2].rsplit("-", 1)[-1]
+    print(
+        '{"isDraft":true,"tagName":"meadow-web-%s","targetCommitish":"%s"}'
+        % (commit, commit)
+    )
 elif args[:2] == ["release", "edit"]:
     Path(os.environ["MOCK_PUBLISHED_MARKER"]).touch()
 else:

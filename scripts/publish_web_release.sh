@@ -30,16 +30,8 @@ verify_checksum() {
 
 verify_checksum "$archive" "$checksum"
 
-verify_release() {
-  local ref_type ref_sha download_dir
-  read -r ref_sha ref_type < <(
-    gh api "repos/$repo/git/ref/tags/$tag" --jq '.object.sha + " " + .object.type'
-  )
-  if [[ "$ref_type" != "commit" || "$ref_sha" != "$commit" ]]; then
-    echo "Release tag $tag does not resolve directly to $commit" >&2
-    exit 1
-  fi
-
+verify_release_assets() {
+  local download_dir
   download_dir=$(mktemp -d)
   trap 'rm -rf "$download_dir"' RETURN
   gh release download "$tag" \
@@ -56,14 +48,41 @@ verify_release() {
   trap - RETURN
 }
 
-if release_json=$(gh release view "$tag" --repo "$repo" --json isDraft 2>/dev/null); then
-  verify_release
+verify_release_metadata() {
+  local release_json=$1
+  if [[ $(jq -r .tagName <<<"$release_json") != "$tag" || \
+    $(jq -r .targetCommitish <<<"$release_json") != "$commit" ]]; then
+    echo "Release metadata does not target $commit" >&2
+    exit 1
+  fi
+}
+
+verify_tag() {
+  local ref_type ref_sha
+  read -r ref_sha ref_type < <(
+    gh api "repos/$repo/git/ref/tags/$tag" --jq '.object.sha + " " + .object.type'
+  )
+  if [[ "$ref_type" != "commit" || "$ref_sha" != "$commit" ]]; then
+    echo "Release tag $tag does not resolve directly to $commit" >&2
+    exit 1
+  fi
+}
+
+if release_json=$(
+  gh release view "$tag" \
+    --repo "$repo" \
+    --json isDraft,tagName,targetCommitish 2>/dev/null
+); then
+  verify_release_metadata "$release_json"
+  verify_release_assets
   if [[ $(jq -r .isDraft <<<"$release_json") == true ]]; then
     gh release edit "$tag" --repo "$repo" --draft=false
+    verify_tag
     echo "Recovered and published verified draft release $tag"
-  else
-    echo "Verified existing durable release $tag"
+    exit 0
   fi
+  verify_tag
+  echo "Verified existing durable release $tag"
   exit 0
 fi
 
@@ -80,6 +99,13 @@ gh release create "$tag" \
   --title "Meadow web $commit" \
   --notes "Commit-addressed Meadow web release for $commit." \
   --draft
-verify_release
+release_json=$(
+  gh release view "$tag" \
+    --repo "$repo" \
+    --json isDraft,tagName,targetCommitish
+)
+verify_release_metadata "$release_json"
+verify_release_assets
 gh release edit "$tag" --repo "$repo" --draft=false
+verify_tag
 echo "Published durable release $tag"
