@@ -91,13 +91,19 @@ else:
     def activate(self, commit, check=True, extra_env=None):
         env = self.env()
         env.update(extra_env or {})
-        return subprocess.run(
+        result = subprocess.run(
             [str(ACTIVATE), commit],
             env=env,
-            check=check,
+            check=False,
             text=True,
             capture_output=True,
         )
+        if check and result.returncode != 0:
+            self.fail(
+                f"activation failed for {commit}\n"
+                f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+            )
+        return result
 
     def test_activate_and_rollback_swap_verified_releases(self):
         first = "1" * 40
