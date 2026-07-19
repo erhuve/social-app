@@ -115,6 +115,11 @@ google-services.json
 # Performance results (Flashlight)
 .perf/
 
+# Browser test output
+test-results/
+playwright-report/
+blob-report/
+
 # Oxlint
 .oxlintcache
 

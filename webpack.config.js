@@ -1,3 +1,4 @@
+/* oxlint-disable import/no-nodejs-modules, typescript/no-unsafe-call, typescript/no-unsafe-member-access */
 const path = require('path')
 
 const createExpoWebpackConfigAsync = require('@expo/webpack-config')
@@ -96,8 +97,7 @@ module.exports = async function (env, argv) {
       })
     }
   } else {
-    // Support static CDN for chunks
-    config.output.publicPath = 'auto'
+    config.output.publicPath = '/'
   }
 
   if (GENERATE_STATS || OPEN_ANALYZER) {

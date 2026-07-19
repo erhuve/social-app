@@ -45,6 +45,10 @@ jobs:
         run: python3 scripts/serve_web_spa_test.py
       - name: Build production web client
         run: pnpm build-web
+      - name: Install browser for web smoke tests
+        run: pnpm exec playwright install --with-deps --only-shell chromium
+      - name: Verify production build in a browser
+        run: pnpm test-web-e2e
       - name: Verify fork-owned release destinations
         run: pnpm check-fork-hygiene web-build
       - name: Package commit-addressed artifact
