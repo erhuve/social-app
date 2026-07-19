@@ -115,6 +115,8 @@ else:
         self.activate(second)
         self.assertEqual(self.current.resolve().name, second)
         self.assertEqual(self.previous.resolve().name, first)
+        for release in (first, second):
+            self.assertEqual((self.releases / release).stat().st_mode & 0o222, 0)
 
         result = subprocess.run(
             [str(ROLLBACK)],

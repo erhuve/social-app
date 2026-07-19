@@ -112,9 +112,10 @@ if [[ -e "$release_dir" || -L "$release_dir" ]]; then
     echo "Existing release content does not match the attested artifact" >&2
     exit 1
   }
+  chmod -R a-w "$release_dir"
 else
-  chmod -R a-w "$install_root/extract"
   mv -T "$install_root/extract" "$release_dir"
+  chmod -R a-w "$release_dir"
 fi
 
 old_target=""
