@@ -310,7 +310,8 @@
     "testPathIgnorePatterns": [
       "/node_modules/",
       "/__rsc_tests__/",
-      "<rootDir>/dev-env/"
+      "<rootDir>/dev-env/",
+      "<rootDir>/scripts/browser-tests/"
     ],
     "setupFilesAfterEnv": [
       "./jest/jestSetup.js"
