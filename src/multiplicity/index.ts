@@ -6,6 +6,13 @@ export {
   restoreRecords,
 } from './action-state'
 export {createBatchedMultiplicityAdapter} from './batched-adapter'
+export {
+  assertMultiplicityWritesEnabled,
+  MAX_MULTIPLICITY_CAPABILITY_AGE_MS,
+  requireMultiplicityCapabilities,
+  resetMultiplicityCapabilitiesForTest,
+  setMultiplicityCapabilities,
+} from './capabilities'
 export type {FakeMultiplicitySeed} from './fake-adapter'
 export {createFakeMultiplicityAdapter} from './fake-adapter'
 export {createFallbackAction} from './fallback'
@@ -49,6 +56,7 @@ export type {
   MultiplicityAdapter,
   MultiplicityBatchRequest,
   MultiplicityBatchResponse,
+  MultiplicityCapabilities,
   PostMultiplicityState,
 } from './types'
 export {MAX_VIEWER_RECORD_URIS} from './types'

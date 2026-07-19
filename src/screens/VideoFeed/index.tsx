@@ -1175,15 +1175,18 @@ function PlayPauseTapArea({
       clearTimeout(doubleTapRef.current)
       doubleTapRef.current = null
       playHaptic('Light')
-      void queueLike().catch(error => {
-        Toast.show(l`There was an issue! ${String(error)}`, {type: 'error'})
-      })
-      sendInteraction({
-        item: post.uri,
-        event: 'app.bsky.feed.defs#interactionLike',
-        feedContext,
-        reqId,
-      })
+      void queueLike()
+        .then(() => {
+          sendInteraction({
+            item: post.uri,
+            event: 'app.bsky.feed.defs#interactionLike',
+            feedContext,
+            reqId,
+          })
+        })
+        .catch(error => {
+          Toast.show(l`There was an issue! ${String(error)}`, {type: 'error'})
+        })
     } else {
       doubleTapRef.current = setTimeout(togglePlayPause, 200)
     }

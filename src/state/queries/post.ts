@@ -18,6 +18,7 @@ import {
   addPendingRecord,
   assertCanAddMultiplicityRecord,
   assertMultiplicityReconciliationCapacity,
+  assertMultiplicityWritesEnabled,
   assertSubjectMutationCapacity,
   commitMultiplicityRemoval,
   confirmMultiplicityAddition,
@@ -334,6 +335,7 @@ function usePostMultiplicityMutationQueue({
 
   const queueCreate = useCallback(() => {
     try {
+      assertMultiplicityWritesEnabled()
       assertSubjectMutationCapacity(subjectKey)
       assertMultiplicityReconciliationCapacity(reconciliationKey)
       assertCanAddMultiplicityRecord(getAction())
@@ -347,6 +349,7 @@ function usePostMultiplicityMutationQueue({
     updateAction(state => addPendingRecord(state, pendingUri))
     return enqueueSubjectMutation(subjectKey, async () => {
       try {
+        assertMultiplicityWritesEnabled()
         const {uri} = await createRecord()
         confirmMultiplicityAddition(reconciliationKey, pendingUri, uri)
         updateAction(state => confirmPendingRecord(state, pendingUri, uri))

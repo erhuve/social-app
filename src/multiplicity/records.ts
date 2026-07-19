@@ -5,6 +5,8 @@ import {
   type BskyAgent,
 } from '@atproto/api'
 
+import {assertMultiplicityWritesEnabled} from './capabilities'
+
 type StrongRef = {uri: string; cid: string}
 
 function assertValid(
@@ -28,6 +30,7 @@ export async function createMultiplicityLike(
     ...(via ? {via} : {}),
   }
   assertValid(AppBskyFeedLike.validateRecord(record), record.$type)
+  assertMultiplicityWritesEnabled()
   return agent.app.bsky.feed.like.create(
     {repo: agent.assertDid, validate: false},
     record,
@@ -46,6 +49,7 @@ export async function createMultiplicityRepost(
     ...(via ? {via} : {}),
   }
   assertValid(AppBskyFeedRepost.validateRecord(record), record.$type)
+  assertMultiplicityWritesEnabled()
   return agent.app.bsky.feed.repost.create(
     {repo: agent.assertDid, validate: false},
     record,
@@ -64,6 +68,7 @@ export async function createMultiplicityFollow(
     ...(via ? {via} : {}),
   }
   assertValid(AppBskyGraphFollow.validateRecord(record), record.$type)
+  assertMultiplicityWritesEnabled()
   return agent.app.bsky.graph.follow.create(
     {repo: agent.assertDid, validate: false},
     record,

@@ -20,9 +20,16 @@ export type MultiplicityBatchRequest = {
   actorDids: readonly string[]
 }
 
+export type MultiplicityCapabilities = {
+  generation: number
+  writesEnabled: boolean
+  feedEnabled: boolean
+}
+
 export type MultiplicityBatchResponse = {
   posts: Readonly<Record<string, PostMultiplicityState>>
   actors: Readonly<Record<string, ActorMultiplicityState>>
+  capabilities?: MultiplicityCapabilities
 }
 
 export interface MultiplicityAdapter {

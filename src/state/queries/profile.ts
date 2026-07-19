@@ -42,6 +42,7 @@ import {
   addPendingRecord,
   assertCanAddMultiplicityRecord,
   assertMultiplicityReconciliationCapacity,
+  assertMultiplicityWritesEnabled,
   assertSubjectMutationCapacity,
   commitMultiplicityRemoval,
   confirmMultiplicityAddition,
@@ -366,6 +367,7 @@ export function useProfileFollowMutationQueue(
   )
   const queueFollow = useCallback(() => {
     try {
+      assertMultiplicityWritesEnabled()
       assertSubjectMutationCapacity(subjectKey)
       assertMultiplicityReconciliationCapacity(reconciliationKey)
       assertCanAddMultiplicityRecord(getFollow())
@@ -379,6 +381,7 @@ export function useProfileFollowMutationQueue(
     updateFollow(state => addPendingRecord(state, pendingUri))
     return enqueueSubjectMutation(subjectKey, async () => {
       try {
+        assertMultiplicityWritesEnabled()
         const {uri} = await followMutation.mutateAsync({did})
         confirmMultiplicityAddition(reconciliationKey, pendingUri, uri)
         updateFollow(state => confirmPendingRecord(state, pendingUri, uri))

@@ -1,4 +1,8 @@
 import {
+  requireMultiplicityCapabilities,
+  setMultiplicityCapabilities,
+} from './capabilities'
+import {
   type MultiplicityAdapter,
   type MultiplicityBatchRequest,
   type MultiplicityBatchResponse,
@@ -35,6 +39,7 @@ export function createHttpMultiplicityAdapter({
   getServiceAuthToken,
 }: HttpMultiplicityAdapterOptions): MultiplicityAdapter {
   const url = endpoint(baseUrl, Boolean(getServiceAuthToken))
+  requireMultiplicityCapabilities()
   const fetchRequest = fetchOption ?? globalThis.fetch
 
   return {
@@ -56,7 +61,9 @@ export function createHttpMultiplicityAdapter({
           `Multiplicity service request failed with status ${response.status}`,
         )
       }
-      return validateBatchResponse(await response.json(), request)
+      const result = validateBatchResponse(await response.json(), request)
+      setMultiplicityCapabilities(result.capabilities)
+      return result
     },
   }
 }

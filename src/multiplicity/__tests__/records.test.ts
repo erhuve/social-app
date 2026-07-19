@@ -3,6 +3,11 @@ import {type BskyAgent} from '@atproto/api'
 jest.unmock('multiformats/cid')
 
 import {
+  requireMultiplicityCapabilities,
+  resetMultiplicityCapabilitiesForTest,
+  setMultiplicityCapabilities,
+} from '../capabilities'
+import {
   createMultiplicityFollow,
   createMultiplicityLike,
   createMultiplicityRepost,
@@ -33,6 +38,8 @@ function createAgent() {
 }
 
 describe('multiplicity record writes', () => {
+  beforeEach(() => resetMultiplicityCapabilitiesForTest())
+
   it('creates each action with server validation disabled after local validation', async () => {
     const {agent, like, repost, follow} = createAgent()
 
@@ -65,5 +72,28 @@ describe('multiplicity record writes', () => {
         createdAt: expect.any(String),
       }),
     )
+  })
+
+  it('checks the runtime switch at the direct PDS write boundary', async () => {
+    const {agent, like, repost, follow} = createAgent()
+    requireMultiplicityCapabilities()
+    setMultiplicityCapabilities({
+      generation: 1,
+      writesEnabled: false,
+      feedEnabled: true,
+    })
+
+    await expect(createMultiplicityLike(agent, subject)).rejects.toThrow(
+      'temporarily paused',
+    )
+    await expect(createMultiplicityRepost(agent, subject)).rejects.toThrow(
+      'temporarily paused',
+    )
+    await expect(
+      createMultiplicityFollow(agent, 'did:plc:author'),
+    ).rejects.toThrow('temporarily paused')
+    expect(like).not.toHaveBeenCalled()
+    expect(repost).not.toHaveBeenCalled()
+    expect(follow).not.toHaveBeenCalled()
   })
 })

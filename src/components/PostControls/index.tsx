@@ -115,6 +115,7 @@ let PostControls = ({
 
     try {
       setHasLikeIconBeenToggled(true)
+      await queueLike()
       sendInteraction({
         item: post.uri,
         event: 'app.bsky.feed.defs#interactionLike',
@@ -122,7 +123,6 @@ let PostControls = ({
         reqId,
       })
       captureAction(ProgressGuideAction.Like)
-      await queueLike()
     } catch (err) {
       const e = err as Error
       if (e?.name !== 'AbortError') {
@@ -140,13 +140,13 @@ let PostControls = ({
     }
 
     try {
+      await queueRepost()
       sendInteraction({
         item: post.uri,
         event: 'app.bsky.feed.defs#interactionRepost',
         feedContext,
         reqId,
       })
-      await queueRepost()
     } catch (err) {
       const e = err as Error
       if (e?.name !== 'AbortError') {

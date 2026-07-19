@@ -6,6 +6,7 @@ import {
   type MultiplicityActionState,
   type MultiplicityBatchRequest,
   type MultiplicityBatchResponse,
+  type MultiplicityCapabilities,
   type PostMultiplicityState,
 } from './types'
 
@@ -14,6 +15,23 @@ function object(value: unknown, label: string): Record<string, unknown> {
     throw new Error(`${label} must be an object`)
   }
   return value as Record<string, unknown>
+}
+
+function cloneCapabilities(value: unknown): MultiplicityCapabilities {
+  const capabilities = object(value, 'Multiplicity response capabilities')
+  if (
+    !Number.isSafeInteger(capabilities.generation) ||
+    (capabilities.generation as number) < 0 ||
+    typeof capabilities.writesEnabled !== 'boolean' ||
+    typeof capabilities.feedEnabled !== 'boolean'
+  ) {
+    throw new Error('Multiplicity capabilities are invalid')
+  }
+  return {
+    generation: capabilities.generation as number,
+    writesEnabled: capabilities.writesEnabled,
+    feedEnabled: capabilities.feedEnabled,
+  }
 }
 
 function cloneActionState(
@@ -129,5 +147,8 @@ export function validateBatchResponse(
             ],
       ),
     ),
+    ...(response.capabilities === undefined
+      ? {}
+      : {capabilities: cloneCapabilities(response.capabilities)}),
   }
 }

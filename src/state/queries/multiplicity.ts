@@ -16,6 +16,7 @@ import {
   multiplicityReconciliationKey,
   type PostMultiplicityState,
   reconcileMultiplicityAction,
+  requireMultiplicityCapabilities,
 } from '#/multiplicity'
 import type * as bsky from '#/types/bsky'
 
@@ -23,6 +24,7 @@ const serviceAuthAudience = MULTIPLICITY_SERVICE_URL
   ? (MULTIPLICITY_SERVICE_DID ??
     getServiceAuthAudFromUrl(MULTIPLICITY_SERVICE_URL))
   : null
+if (MULTIPLICITY_SERVICE_URL) requireMultiplicityCapabilities()
 const adapters = new WeakMap<AtpAgent, MultiplicityAdapter>()
 
 function getMultiplicityAdapter(
