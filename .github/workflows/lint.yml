@@ -2,11 +2,11 @@ name: Lint
 
 on:
   pull_request:
-  push:
-    branches:
-      - main
+  workflow_call:
 concurrency:
-  group: '${{ github.workflow }}-${{ github.head_ref || github.ref }}'
+  # Called workflows inherit the caller's github.workflow value. Keep this
+  # distinct from Meadow Web Release so the quality gate cannot cancel its caller.
+  group: 'lint-${{ github.workflow }}-${{ github.head_ref || github.ref }}'
   cancel-in-progress: true
 
 # These jobs only check out the repo and run checks, so read access to the

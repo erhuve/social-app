@@ -22,8 +22,19 @@ env:
   EXPO_PUBLIC_MULTIPLICITY_FEED_URI: at://did:plc:m6ueqhacjannzmreidcijoj2/app.bsky.feed.generator/raffle
 
 jobs:
+  quality:
+    name: Validate release source
+    if: github.event_name != 'pull_request'
+    uses: ./.github/workflows/lint.yml
+    permissions:
+      contents: read
+
   build:
     name: Build immutable web artifact
+    needs: quality
+    if: >-
+      always() &&
+      (github.event_name == 'pull_request' || needs.quality.result == 'success')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:

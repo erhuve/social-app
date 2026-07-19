@@ -13,6 +13,8 @@ ROOT = Path(__file__).resolve().parent.parent
 ACTIVATE = ROOT / "scripts" / "activate_web_release.sh"
 PUBLISH = ROOT / "scripts" / "publish_web_release.sh"
 ROLLBACK = ROOT / "scripts" / "rollback_web_release.sh"
+LINT_WORKFLOW = ROOT / ".github" / "workflows" / "lint.yml"
+RELEASE_WORKFLOW = ROOT / ".github" / "workflows" / "meadow-web-release.yml"
 
 
 class WebReleaseTest(unittest.TestCase):
@@ -93,6 +95,18 @@ else:
             f"{digest}  {archive.name}\n"
         )
         return archive
+
+    def test_release_build_requires_successful_quality_workflow(self):
+        release = RELEASE_WORKFLOW.read_text()
+        lint = LINT_WORKFLOW.read_text()
+        build = release.split("\n  build:\n", 1)[1].split("\n  attest:\n", 1)[0]
+
+        self.assertIn("  workflow_call:\n", lint)
+        self.assertNotIn("  push:\n", lint.split("concurrency:", 1)[0])
+        self.assertIn("group: 'lint-${{ github.workflow }}-", lint)
+        self.assertIn("    uses: ./.github/workflows/lint.yml\n", release)
+        self.assertIn("    needs: quality\n", build)
+        self.assertIn("needs.quality.result == 'success'", build)
 
     def activate(self, commit, check=True, extra_env=None):
         env = self.env()

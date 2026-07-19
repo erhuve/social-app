@@ -9,6 +9,9 @@ services for network data, account capabilities, moderation, media, and other
 provider-owned behavior. Meadow's companion multiplicity service indexes public
 Jetstream records and serves aggregate counts and viewer-owned record URIs.
 
+The public web client is available at
+[multiplicity-client-hatsunemiku.zocomputer.io](https://multiplicity-client-hatsunemiku.zocomputer.io).
+
 ## Development
 
 The client is a React Native and React Native Web application written in
