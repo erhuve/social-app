@@ -6,8 +6,8 @@ import {device, useStorage} from '#/storage'
 
 /*
  * Marks the active policy update as completed in device storage.
- * `usePolicyUpdateState` will react to this and replicate this status in the
- * server NUX state for this account.
+ * Meadow keeps this fork-specific acknowledgment on the device rather than
+ * transmitting it to the account's AppView.
  */
 export function usePreemptivelyCompleteActivePolicyUpdate() {
   const [_completedForDevice, setCompletedForDevice] = useStorage(device, [

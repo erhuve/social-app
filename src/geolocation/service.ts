@@ -47,6 +47,8 @@ let geolocationServicePromise: Promise<{success: boolean}> | undefined
  * startup.
  */
 export async function resolve() {
+  if (!GEOLOCATION_SERVICE_URL) return
+  const serviceUrl = GEOLOCATION_SERVICE_URL
   if (geolocationServicePromise) {
     const cached = device.get(['geolocationServiceResponse'])
     if (cached) {
@@ -82,9 +84,7 @@ export async function resolve() {
 
       try {
         // Try once, fail fast
-        const config = await fetchGeolocationServiceData(
-          GEOLOCATION_SERVICE_URL,
-        )
+        const config = await fetchGeolocationServiceData(serviceUrl)
         cacheResponseOrThrow(config)
         success = true
       } catch (e: any) {
@@ -96,9 +96,7 @@ export async function resolve() {
         )
 
         // retry 3 times, but don't await, proceed with default
-        networkRetry(3, () =>
-          fetchGeolocationServiceData(GEOLOCATION_SERVICE_URL),
-        )
+        networkRetry(3, () => fetchGeolocationServiceData(serviceUrl))
           .then(config => {
             cacheResponseOrThrow(config)
           })

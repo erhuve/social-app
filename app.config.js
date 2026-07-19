@@ -17,6 +17,11 @@ module.exports = function (_config) {
    * @see https://docs.expo.dev/build-reference/variables/#built-in-environment-variables
    */
   const PLATFORM = process.env.EAS_BUILD_PLATFORM ?? 'web'
+  if (PLATFORM !== 'web') {
+    throw new Error(
+      'Native Meadow releases are disabled until fork-owned signing, app groups, push identity, and store records are configured.',
+    )
+  }
 
   const IS_TESTFLIGHT = process.env.EXPO_PUBLIC_ENV === 'testflight'
   const IS_PRODUCTION = process.env.EXPO_PUBLIC_ENV === 'production'
@@ -31,9 +36,19 @@ module.exports = function (_config) {
     ...(IS_DEV || IS_TESTFLIGHT ? [] : []),
   ]
 
-  const UPDATES_ENABLED = IS_TESTFLIGHT || IS_PRODUCTION
+  const UPDATES_URL = process.env.EXPO_UPDATES_URL
+  const UPDATES_CODE_SIGNING_CERT = process.env.EXPO_UPDATES_CODE_SIGNING_CERT
+  const UPDATES_ENABLED = Boolean(
+    (IS_TESTFLIGHT || IS_PRODUCTION) &&
+    UPDATES_URL &&
+    UPDATES_CODE_SIGNING_CERT,
+  )
 
-  const USE_SENTRY = Boolean(process.env.SENTRY_AUTH_TOKEN)
+  const SENTRY_ORG = process.env.SENTRY_ORG
+  const SENTRY_PROJECT = process.env.SENTRY_PROJECT
+  const USE_SENTRY = Boolean(
+    process.env.SENTRY_AUTH_TOKEN && SENTRY_ORG && SENTRY_PROJECT,
+  )
 
   const IOS_ICON_FILE =
     PLATFORM === 'web' // web build doesn't like .icon files
@@ -45,20 +60,19 @@ module.exports = function (_config) {
   return {
     expo: {
       version: VERSION,
-      name: 'Bluesky',
-      slug: 'bluesky',
-      scheme: 'bluesky',
-      owner: 'blueskysocial',
+      name: 'Meadow',
+      slug: 'meadow',
+      scheme: 'meadow',
       runtimeVersion: {
         policy: 'appVersion',
       },
       icon: './assets/app-icons/ios_icon_default_next.png',
       userInterfaceStyle: 'automatic',
-      primaryColor: '#006AFF',
+      primaryColor: '#3f6b45',
       newArchEnabled: false,
       ios: {
         supportsTablet: false,
-        bundleIdentifier: 'xyz.blueskyweb.app',
+        bundleIdentifier: undefined,
         appleTeamId: process.env.EXPO_APPLE_TEAM_ID,
         config: {
           usesNonExemptEncryption: false,
@@ -76,7 +90,7 @@ module.exports = function (_config) {
             'Used to save images to your library.',
           NSPhotoLibraryUsageDescription:
             'Used for profile pictures, posts, and other kinds of content',
-          CFBundleSpokenName: 'Blue Sky',
+          CFBundleSpokenName: 'Meadow',
           CFBundleLocalizations: [
             'en',
             'an',
@@ -197,7 +211,7 @@ module.exports = function (_config) {
           backgroundColor: '#006AFF',
         },
         googleServicesFile: './google-services.json',
-        package: 'xyz.blueskyweb.app',
+        package: undefined,
         intentFilters: [
           {
             action: 'VIEW',
@@ -221,23 +235,24 @@ module.exports = function (_config) {
         ],
       },
       web: {
-        favicon: './assets/favicon.png',
+        favicon: './assets/favicon-meadow.png',
       },
-      updates: {
-        url: 'https://updates.bsky.app/manifest',
-        enabled: UPDATES_ENABLED,
-        fallbackToCacheTimeout: 30000,
-        codeSigningCertificate: UPDATES_ENABLED
-          ? './code-signing/certificate.pem'
-          : undefined,
-        codeSigningMetadata: UPDATES_ENABLED
-          ? {
+      updates: UPDATES_ENABLED
+        ? {
+            url: UPDATES_URL,
+            enabled: true,
+            fallbackToCacheTimeout: 30000,
+            codeSigningCertificate: UPDATES_CODE_SIGNING_CERT,
+            codeSigningMetadata: {
               keyid: 'main',
               alg: 'rsa-v1_5-sha256',
-            }
-          : undefined,
-        checkAutomatically: 'NEVER',
-      },
+            },
+            checkAutomatically: 'NEVER',
+          }
+        : {
+            enabled: false,
+            checkAutomatically: 'NEVER',
+          },
       plugins: [
         'expo-video',
         'expo-localization',
@@ -251,8 +266,8 @@ module.exports = function (_config) {
               /** @type {[string, any]} */ ([
                 '@sentry/react-native/expo',
                 {
-                  organization: 'blueskyweb',
-                  project: 'app',
+                  organization: SENTRY_ORG,
+                  project: SENTRY_PROJECT,
                   url: 'https://sentry.io',
                 },
               ]),
@@ -433,34 +448,11 @@ module.exports = function (_config) {
           build: {
             experimental: {
               ios: {
-                appExtensions: [
-                  {
-                    targetName: 'Share-with-Bluesky',
-                    bundleIdentifier: 'xyz.blueskyweb.app.Share-with-Bluesky',
-                    entitlements: {
-                      'com.apple.security.application-groups': [
-                        'group.app.bsky',
-                      ],
-                    },
-                  },
-                  {
-                    targetName: 'BlueskyNSE',
-                    bundleIdentifier: 'xyz.blueskyweb.app.BlueskyNSE',
-                    entitlements: {
-                      'com.apple.security.application-groups': [
-                        'group.app.bsky',
-                      ],
-                    },
-                  },
-                  {
-                    targetName: 'BlueskyClip',
-                    bundleIdentifier: 'xyz.blueskyweb.app.AppClip',
-                  },
-                ],
+                appExtensions: [],
               },
             },
           },
-          projectId: '55bd077a-d905-4184-9c7f-94789ba0f302',
+          projectId: undefined,
         },
       },
     },

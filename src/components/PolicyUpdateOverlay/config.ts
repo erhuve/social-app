@@ -11,4 +11,4 @@ export const ACTIVE_UPDATE_ID = ID
  * update has run its course, set this to false. For new updates, set this to
  * true and change `ACTIVE_UPDATE_ID` to the new update ID.
  */
-export const POLICY_UPDATE_IS_ENABLED = false
+export const POLICY_UPDATE_IS_ENABLED = true

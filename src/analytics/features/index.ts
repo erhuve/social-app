@@ -37,7 +37,18 @@ const TIMEOUT_INIT = 2000 // TODO should base on p99 or something
 const TIMEOUT_PREFER_LOW_LATENCY = 250
 const TIMEOUT_PREFER_FRESH_GATES = 1500
 
+const remoteFeaturesEnabled = Boolean(
+  env.GROWTHBOOK_API_HOST && env.GROWTHBOOK_CLIENT_KEY,
+)
+const localFeatureDefaults = {
+  [Features.ImportContactsOnboardingDisable]: {defaultValue: true},
+  [Features.ImportContactsSettingsDisable]: {defaultValue: true},
+  [Features.LiveNowBetaDisable]: {defaultValue: true},
+  [Features.GroupChatsDisable]: {defaultValue: true},
+}
+
 export const features = new GrowthBook({
+  features: remoteFeaturesEnabled ? undefined : localFeatureDefaults,
   apiHost: env.GROWTHBOOK_API_HOST,
   clientKey: env.GROWTHBOOK_CLIENT_KEY,
 })
@@ -49,20 +60,23 @@ export const features = new GrowthBook({
  * that case, we may see a flash of uncustomized content until the
  * initialization completes.
  */
-export const init = features.init({timeout: TIMEOUT_INIT}).then(res => {
-  if (!res.success) {
-    logger.warn('GrowthBook initialization failed or timed out', {
-      source: res.source,
-      safeMessage: res.error?.toString(),
+export const init = remoteFeaturesEnabled
+  ? features.init({timeout: TIMEOUT_INIT}).then(res => {
+      if (!res.success) {
+        logger.warn('GrowthBook initialization failed or timed out', {
+          source: res.source,
+          safeMessage: res.error?.toString(),
+        })
+      }
     })
-  }
-})
+  : Promise.resolve()
 
 /**
  * Refresh feature gates from GrowthBook. Updates attributes based on the
  * provided account, if any.
  */
 export async function refresh({strategy}: {strategy: FeatureFetchStrategy}) {
+  if (!remoteFeaturesEnabled) return
   await features.refreshFeatures({
     timeout:
       strategy === 'prefer-low-latency'

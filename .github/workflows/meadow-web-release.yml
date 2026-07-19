@@ -1,6 +1,7 @@
 name: Meadow Web Release
 
 on:
+  pull_request:
   push:
     branches:
       - main
@@ -43,11 +44,16 @@ jobs:
         run: python3 scripts/serve_web_spa_test.py
       - name: Build production web client
         run: pnpm build-web
+      - name: Verify fork-owned release destinations
+        run: pnpm check-fork-hygiene web-build
       - name: Package commit-addressed artifact
+        if: github.event_name != 'pull_request'
         run: scripts/package_web_release.sh "$GITHUB_SHA"
       - name: Verify packaged artifact
+        if: github.event_name != 'pull_request'
         run: (cd artifacts && sha256sum -c "meadow-web-$GITHUB_SHA.tar.gz.sha256")
       - name: Upload release artifact
+        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: meadow-web-${{ github.sha }}

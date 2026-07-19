@@ -22,6 +22,7 @@ export enum Nux {
    * Blocking announcements. New IDs are required for each new announcement.
    */
   PolicyUpdate202508 = 'PolicyUpdate202508',
+  MeadowPublicBeta202607 = 'MeadowPublicBeta202607',
 }
 
 export const nuxNames = new Set(Object.values(Nux))
@@ -53,6 +54,10 @@ export type AppNux = BaseNux<
     }
   | {
       id: Nux.PolicyUpdate202508
+      data: undefined
+    }
+  | {
+      id: Nux.MeadowPublicBeta202607
       data: undefined
     }
   | {
@@ -97,6 +102,7 @@ export const NuxSchemas: Record<Nux, zod.ZodObject<any> | undefined> = {
   [Nux.AgeAssuranceDismissibleNotice]: undefined,
   [Nux.AgeAssuranceDismissibleFeedBanner]: undefined,
   [Nux.PolicyUpdate202508]: undefined,
+  [Nux.MeadowPublicBeta202607]: undefined,
   [Nux.BookmarksAnnouncement]: undefined,
   [Nux.FindContactsAnnouncement]: undefined,
   [Nux.FindContactsDismissibleBanner]: undefined,

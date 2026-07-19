@@ -1,0 +1,36 @@
+name: Meadow support
+description: Report a problem with the Meadow client or multiplicity service
+title: "[Support] "
+labels:
+  - support
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        This issue is public. Do not include passwords, tokens, email addresses,
+        private messages, or other sensitive information. Account access,
+        moderation, and takedown issues belong with the relevant AT Protocol
+        provider.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Web client
+        - Multiplicity actions
+        - Custom feed
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Include the steps and expected result without sensitive data.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Copy the commit shown in Settings > About, if available.

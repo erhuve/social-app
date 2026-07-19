@@ -21,7 +21,6 @@ import {clearStorage} from '#/state/persisted'
 import {useModerationOpts} from '#/state/preferences/moderation-opts'
 import {useDeleteActorDeclaration} from '#/state/queries/messages/actor-declaration'
 import {useProfileQuery, useProfilesQuery} from '#/state/queries/profile'
-import {useAgent} from '#/state/session'
 import {type SessionAccount, useSession, useSessionApi} from '#/state/session'
 import {useOnboardingDispatch} from '#/state/shell'
 import {useLoggedOutViewControls} from '#/state/shell/logged-out'
@@ -58,7 +57,7 @@ import {Window_Stroke2_Corner2_Rounded as WindowIcon} from '#/components/icons/W
 import * as Layout from '#/components/Layout'
 import {Loader} from '#/components/Loader'
 import * as Menu from '#/components/Menu'
-import {ID as PolicyUpdate202508} from '#/components/PolicyUpdateOverlay/updates/202508/config'
+import {ID as MeadowPublicBeta202607} from '#/components/PolicyUpdateOverlay/updates/202508/config'
 import {ProfileBadges} from '#/components/ProfileBadges'
 import * as Prompt from '#/components/Prompt'
 import * as Toast from '#/components/Toast'
@@ -384,7 +383,6 @@ function ProfilePreview({
 
 function DevOptions() {
   const {t: l} = useLingui()
-  const agent = useAgent()
   const [override, setOverride] = useStorage(device, [
     'policyUpdateDebugOverride',
   ])
@@ -530,7 +528,7 @@ function DevOptions() {
       <SettingsList.Divider />
       <View style={[a.p_xl, a.gap_md]}>
         <Text style={[a.text_lg, a.font_semi_bold]}>
-          PolicyUpdate202508 Debug
+          MeadowPublicBeta202607 Debug
         </Text>
 
         <View style={[a.flex_row, a.align_center, a.justify_between, a.gap_md]}>
@@ -549,8 +547,7 @@ function DevOptions() {
 
           <Button
             onPress={() => {
-              device.set([PolicyUpdate202508], false)
-              void agent.bskyAppRemoveNuxs([PolicyUpdate202508])
+              device.set([MeadowPublicBeta202607], false)
               Toast.show(`Done`, {
                 type: 'info',
               })

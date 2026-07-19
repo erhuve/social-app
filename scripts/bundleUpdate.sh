@@ -3,6 +3,10 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
+: "${EXPO_UPDATES_UPLOAD_URL:?Set EXPO_UPDATES_UPLOAD_URL to a Meadow-owned upload endpoint}"
+: "${EXPO_UPDATES_UPLOAD_USERNAME:?Set EXPO_UPDATES_UPLOAD_USERNAME}"
+: "${EXPO_UPDATES_UPLOAD_TOKEN:?Set EXPO_UPDATES_UPLOAD_TOKEN}"
+
 rm -rf bundleTempDir
 rm -rf bundle.tar.gz
 
@@ -15,7 +19,7 @@ fi
 
 cd bundleTempDir || exit
 BUNDLE_VERSION=$(date +%s)
-DEPLOYMENT_URL="https://updates.bsky.app/v1/upload?runtime-version=$RUNTIME_VERSION&bundle-version=$BUNDLE_VERSION&channel=$CHANNEL_NAME&ios-build-number=$BSKY_IOS_BUILD_NUMBER&android-build-number=$BSKY_ANDROID_VERSION_CODE"
+DEPLOYMENT_URL="$EXPO_UPDATES_UPLOAD_URL?runtime-version=$RUNTIME_VERSION&bundle-version=$BUNDLE_VERSION&channel=$CHANNEL_NAME&ios-build-number=$BSKY_IOS_BUILD_NUMBER&android-build-number=$BSKY_ANDROID_VERSION_CODE"
 
 tar czvf bundle.tar.gz ./*
 
@@ -26,7 +30,7 @@ echo "  channel: $CHANNEL_NAME"
 echo "  ios-build-number: $BSKY_IOS_BUILD_NUMBER"
 echo "  android-build-number: $BSKY_ANDROID_VERSION_CODE"
 
-curl --fail-with-body -o - --form "bundle=@./bundle.tar.gz" --user "bsky:$DENIS_API_KEY" --basic "$DEPLOYMENT_URL"
+curl --fail-with-body -o - --form "bundle=@./bundle.tar.gz" --user "$EXPO_UPDATES_UPLOAD_USERNAME:$EXPO_UPDATES_UPLOAD_TOKEN" --basic "$DEPLOYMENT_URL"
 
 cd ..
 

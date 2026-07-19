@@ -29,6 +29,7 @@ export const DEFAULT_APP_CONFIG_RESPONSE: AppConfigResponse = {
 let fetchAppConfigPromise: Promise<AppConfigResponse> | undefined
 
 async function fetchAppConfig(): Promise<AppConfigResponse | null> {
+  if (!APP_CONFIG_URL) return null
   try {
     if (!fetchAppConfigPromise) {
       fetchAppConfigPromise = (async () => {
@@ -52,6 +53,7 @@ export function Provider({children}: React.PropsWithChildren<{}>) {
     {
       staleTime: Infinity,
       queryKey: appConfigQueryKey,
+      enabled: Boolean(APP_CONFIG_URL),
       refetchInterval: query => {
         // refetch regularly if fetch failed, otherwise never refetch
         return query.state.status === 'error' ? 60e3 : Infinity

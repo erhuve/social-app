@@ -13,6 +13,12 @@ const {entrypoints} = require(
   path.join(projectRoot, 'web-build/asset-manifest.json'),
 )
 
+const webManifestFile = path.join(projectRoot, 'web-build', 'manifest.json')
+const webManifest = JSON.parse(fs.readFileSync(webManifestFile, 'utf8'))
+delete webManifest.related_applications
+delete webManifest.prefer_related_applications
+fs.writeFileSync(webManifestFile, `${JSON.stringify(webManifest, null, 2)}\n`)
+
 console.log(`Found ${entrypoints.length} entrypoints`)
 console.log(`Writing ${templateFile}`)
 

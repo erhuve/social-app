@@ -10,7 +10,7 @@ permissions: {}
 
 jobs:
   handle-comment:
-    if: github.event.issue.pull_request
+    if: github.repository == 'bluesky-social/social-app' && github.event.issue.pull_request
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -188,7 +188,9 @@ jobs:
       - name: 📦 Package Bundle and 🚀 Deploy
         run: pnpm use-build-number bash scripts/bundleUpdate.sh
         env:
-          DENIS_API_KEY: ${{ secrets.DENIS_API_KEY }}
+          EXPO_UPDATES_UPLOAD_URL: ${{ vars.EXPO_UPDATES_UPLOAD_URL }}
+          EXPO_UPDATES_UPLOAD_USERNAME: ${{ vars.EXPO_UPDATES_UPLOAD_USERNAME }}
+          EXPO_UPDATES_UPLOAD_TOKEN: ${{ secrets.EXPO_UPDATES_UPLOAD_TOKEN }}
           CHANNEL_NAME: pull-request-${{ github.event.issue.number }}
           RUNTIME_VERSION:
 

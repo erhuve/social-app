@@ -1,6 +1,7 @@
 import {MetricsClient} from './client'
 
 let appStateCallback: (state: string) => void
+let mockMetricsApiHost: string | undefined = 'https://test.metrics.api'
 
 jest.mock('#/lib/appState', () => ({
   onAppStateChange: jest.fn(cb => {
@@ -21,7 +22,9 @@ jest.mock('#/logger', () => ({
 }))
 
 jest.mock('#/env', () => ({
-  METRICS_API_HOST: 'https://test.metrics.api',
+  get METRICS_API_HOST() {
+    return mockMetricsApiHost
+  },
   IS_WEB: false,
 }))
 
@@ -35,6 +38,7 @@ describe('MetricsClient', () => {
   let fetchRequests: {body: any}[]
 
   beforeEach(() => {
+    mockMetricsApiHost = 'https://test.metrics.api'
     jest.useFakeTimers({advanceTimers: true})
     fetchRequests = []
     fetchMock = jest.fn().mockImplementation(async (_url, options) => {
@@ -64,6 +68,17 @@ describe('MetricsClient', () => {
     expect(fetchRequests[0].body.events).toHaveLength(2)
     expect(fetchRequests[0].body.events[0].event).toBe('click')
     expect(fetchRequests[0].body.events[1].event).toBe('view')
+  })
+
+  it('does not queue or transmit events when telemetry is unconfigured', async () => {
+    mockMetricsApiHost = undefined
+    const client = new MetricsClient<TestEvents>()
+    client.track('click', {button: 'submit'})
+
+    await jest.advanceTimersByTimeAsync(10_000)
+
+    expect(fetchRequests).toHaveLength(0)
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 
   it('flushes when maxBatchSize is exceeded', async () => {

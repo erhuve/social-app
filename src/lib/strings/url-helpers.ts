@@ -375,18 +375,13 @@ export function createBskyAppAbsoluteUrl(path: string): string {
 }
 
 export function createProxiedUrl(url: string): string {
-  let u
   try {
-    u = new URL(url)
+    const parsed = new URL(url)
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return url
   } catch {
     return url
   }
-
-  if (u?.protocol !== 'http:' && u?.protocol !== 'https:') {
-    return url
-  }
-
-  return `https://go.bsky.app/redirect?u=${encodeURIComponent(url)}`
+  return url
 }
 
 export function isShortLink(url: string): boolean {

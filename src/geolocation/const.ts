@@ -1,7 +1,9 @@
 import {GEOLOCATION_URL} from '#/env'
 import {type Geolocation} from '#/geolocation/types'
 
-export const GEOLOCATION_SERVICE_URL = `${GEOLOCATION_URL}/geolocation`
+export const GEOLOCATION_SERVICE_URL = GEOLOCATION_URL
+  ? `${GEOLOCATION_URL}/geolocation`
+  : undefined
 
 /**
  * Default geolocation config.

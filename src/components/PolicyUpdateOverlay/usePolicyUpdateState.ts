@@ -1,6 +1,6 @@
 import {useMemo} from 'react'
 
-import {useNux, useSaveNux} from '#/state/queries/nuxs'
+import {type useSaveNux} from '#/state/queries/nuxs'
 import {ACTIVE_UPDATE_ID} from '#/components/PolicyUpdateOverlay/config'
 import {logger} from '#/components/PolicyUpdateOverlay/logger'
 import {IS_DEV} from '#/env'
@@ -20,8 +20,6 @@ export function usePolicyUpdateState({
    */
   enabled: boolean
 }) {
-  const nux = useNux(ACTIVE_UPDATE_ID)
-  const {mutate: save, variables} = useSaveNux()
   const deviceStorage = useStorage(device, [ACTIVE_UPDATE_ID])
   const debugOverride =
     !!useStorage(device, ['policyUpdateDebugOverride'])[0] && IS_DEV
@@ -38,48 +36,22 @@ export function usePolicyUpdateState({
       }
     }
 
-    const nuxIsReady = nux.status === 'ready'
-    const nuxIsCompleted = nux.nux?.completed === true
-    const nuxIsOptimisticallyCompleted = !!variables?.completed
     const [completedForDevice, setCompletedForDevice] = deviceStorage
-
-    const completed = computeCompletedState({
-      nuxIsReady,
-      nuxIsCompleted,
-      nuxIsOptimisticallyCompleted,
-      completedForDevice,
-    })
+    const completed = debugOverride ? false : completedForDevice === true
 
     logger.debug(`state`, {
       completed,
-      nux,
       completedForDevice,
     })
-
-    if (!debugOverride) {
-      syncCompletedState({
-        nuxIsReady,
-        nuxIsCompleted,
-        nuxIsOptimisticallyCompleted,
-        completedForDevice,
-        save,
-        setCompletedForDevice,
-      })
-    }
 
     return {
       completed,
       complete() {
         logger.debug(`user completed`)
-        save({
-          id: ACTIVE_UPDATE_ID,
-          completed: true,
-          data: undefined,
-        })
         setCompletedForDevice(true)
       },
     }
-  }, [enabled, nux, save, variables, deviceStorage, debugOverride])
+  }, [enabled, deviceStorage, debugOverride])
 }
 
 export function computeCompletedState({

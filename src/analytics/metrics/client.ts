@@ -11,7 +11,6 @@ type Event<M extends Record<string, any>> = {
   metadata: Record<string, any>
 }
 
-const TRACKING_ENDPOINT = env.METRICS_API_HOST + '/t'
 const logger = Logger.create(Logger.Context.Metric, {})
 
 export class MetricsClient<M extends Record<string, any>> {
@@ -42,6 +41,7 @@ export class MetricsClient<M extends Record<string, any>> {
     payload: M[E],
     metadata: Record<string, any> = {},
   ) {
+    if (!env.METRICS_API_HOST) return
     this.start()
 
     const e: Event<M> = {
@@ -67,11 +67,13 @@ export class MetricsClient<M extends Record<string, any>> {
   }
 
   private async sendBatch(events: Event<M>[], isRetry: boolean = false) {
+    if (!env.METRICS_API_HOST) return
+    const trackingEndpoint = `${env.METRICS_API_HOST}/t`
     try {
       const body = JSON.stringify({events})
       if (env.IS_WEB && 'navigator' in globalThis && navigator.sendBeacon) {
         const success = navigator.sendBeacon(
-          TRACKING_ENDPOINT,
+          trackingEndpoint,
           new Blob([body], {type: 'application/json'}),
         )
         if (!success) {
@@ -79,7 +81,7 @@ export class MetricsClient<M extends Record<string, any>> {
           throw new Error(`Failed to fetch: sendBeacon returned false`)
         }
       } else {
-        const res = await fetch(TRACKING_ENDPOINT, {
+        const res = await fetch(trackingEndpoint, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

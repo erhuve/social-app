@@ -1,4 +1,4 @@
-import {type ID as PolicyUpdate202508} from '#/components/PolicyUpdateOverlay/updates/202508/config'
+import {type ID as MeadowPublicBeta202607} from '#/components/PolicyUpdateOverlay/updates/202508/config'
 import {type Gif} from '#/features/gifPicker/types'
 import {type InviteThemeKey} from '#/features/inviteFriends/themes'
 import {type Geolocation} from '#/geolocation/types'
@@ -72,7 +72,7 @@ export type Device = {
    * Policy update overlays. New IDs are required for each new announcement.
    */
   policyUpdateDebugOverride?: boolean
-  [PolicyUpdate202508]?: boolean
+  [MeadowPublicBeta202607]?: boolean
 }
 
 export type Account = {

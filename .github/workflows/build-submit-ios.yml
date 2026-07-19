@@ -205,10 +205,12 @@ jobs:
         run: pnpm eas submit -p ios --non-interactive --path "$BUILD_DIR/Bluesky.ipa"
 
       - name: 🪲 Upload dSYM to Sentry
+        if: ${{ vars.SENTRY_ORG != '' && vars.SENTRY_PROJECT != '' }}
+        env:
+          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: >
-          SENTRY_ORG=blueskyweb
-          SENTRY_PROJECT=app
-          SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
           pnpm sentry-cli debug-files upload "$BUILD_DIR/Bluesky.app.dSYM.zip" --include-sources
 
       - name: 📚 Get version from package.json

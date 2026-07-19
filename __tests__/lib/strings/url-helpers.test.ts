@@ -1,12 +1,20 @@
 import {describe, expect, it} from '@jest/globals'
 
 import {
+  createProxiedUrl,
   getChatInviteCodeFromUrl,
   isPossiblyAUrl,
   isTrustedUrl,
   linkRequiresWarning,
   splitApexDomain,
 } from '../../../src/lib/strings/url-helpers'
+
+describe('createProxiedUrl', () => {
+  it('opens web destinations directly without disclosing them to a redirect service', () => {
+    const url = 'https://example.com/private?token=secret#details'
+    expect(createProxiedUrl(url)).toBe(url)
+  })
+})
 
 describe('linkRequiresWarning', () => {
   type Case = [string, string, boolean]

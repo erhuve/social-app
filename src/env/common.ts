@@ -87,20 +87,20 @@ export const CHAT_PROXY_DID: Did =
 /**
  * Metrics API host
  */
-export const METRICS_API_HOST: string =
-  process.env.EXPO_PUBLIC_METRICS_API_HOST || 'https://events.bsky.app'
+export const METRICS_API_HOST: string | undefined =
+  process.env.EXPO_PUBLIC_METRICS_API_HOST
 
 /**
  * Growthbook API host
  */
-export const GROWTHBOOK_API_HOST: string =
-  process.env.EXPO_PUBLIC_GROWTHBOOK_API_HOST || `${METRICS_API_HOST}/gb`
+export const GROWTHBOOK_API_HOST: string | undefined =
+  process.env.EXPO_PUBLIC_GROWTHBOOK_API_HOST
 
 /**
  * Growthbook client key
  */
-export const GROWTHBOOK_CLIENT_KEY: string =
-  process.env.EXPO_PUBLIC_GROWTHBOOK_CLIENT_KEY || 'sdk-7gkUkGy9wguUjyFe'
+export const GROWTHBOOK_CLIENT_KEY: string | undefined =
+  process.env.EXPO_PUBLIC_GROWTHBOOK_CLIENT_KEY
 
 /**
  * Sentry DSN for telemetry
@@ -133,28 +133,19 @@ export const GCP_PROJECT_ID: number =
  * URLs for the app config web worker. Can be a
  * locally running server, see `env.example` for more.
  */
-export const GEOLOCATION_DEV_URL = process.env.GEOLOCATION_DEV_URL
-export const GEOLOCATION_PROD_URL = `https://ip.bsky.app`
-export const GEOLOCATION_URL = IS_DEV
-  ? (GEOLOCATION_DEV_URL ?? GEOLOCATION_PROD_URL)
-  : GEOLOCATION_PROD_URL
+export const GEOLOCATION_URL: string | undefined =
+  process.env.EXPO_PUBLIC_GEOLOCATION_URL
 
 /**
  * URLs for the live-event config web worker. Can be a
  * locally running server, see `env.example` for more.
  */
-export const LIVE_EVENTS_DEV_URL = process.env.LIVE_EVENTS_DEV_URL
-export const LIVE_EVENTS_PROD_URL = `https://live-events.workers.bsky.app`
-export const LIVE_EVENTS_URL = IS_DEV
-  ? (LIVE_EVENTS_DEV_URL ?? LIVE_EVENTS_PROD_URL)
-  : LIVE_EVENTS_PROD_URL
+export const LIVE_EVENTS_URL: string | undefined =
+  process.env.EXPO_PUBLIC_LIVE_EVENTS_URL
 
 /**
  * URLs for the app-config web worker. Can be a
  * locally running server, see `env.example` for more.
  */
-export const APP_CONFIG_DEV_URL = process.env.APP_CONFIG_DEV_URL
-export const APP_CONFIG_PROD_URL = `https://app-config.workers.bsky.app`
-export const APP_CONFIG_URL = IS_DEV
-  ? (APP_CONFIG_DEV_URL ?? APP_CONFIG_PROD_URL)
-  : APP_CONFIG_PROD_URL
+export const APP_CONFIG_URL: string | undefined =
+  process.env.EXPO_PUBLIC_APP_CONFIG_URL

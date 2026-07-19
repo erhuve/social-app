@@ -11,8 +11,11 @@ export const BSKY_SERVICE = 'https://bsky.social'
 export const BSKY_SERVICE_DID = 'did:web:bsky.social'
 export const PUBLIC_BSKY_SERVICE = 'https://public.api.bsky.app'
 export const DEFAULT_SERVICE = BSKY_SERVICE
-const HELP_DESK_LANG = 'en-us'
-export const HELP_DESK_URL = `https://blueskyweb.zendesk.com/hc/${HELP_DESK_LANG}`
+export const MEADOW_REPOSITORY_URL = 'https://github.com/erhuve/social-app'
+const MEADOW_POLICY_BASE_URL = `${MEADOW_REPOSITORY_URL}/blob/main/docs/meadow`
+export const HELP_DESK_URL = `${MEADOW_POLICY_BASE_URL}/support.md`
+export const BLUESKY_TERMS_OF_SERVICE_URL =
+  'https://bsky.social/about/support/tos'
 export const CHAT_SERVICE = 'https://api.bsky.chat'
 export const EMBED_SERVICE = 'https://embed.bsky.app'
 export const EMBED_SCRIPT = `${EMBED_SERVICE}/static/embed.js`
@@ -40,22 +43,17 @@ export const DISCOVER_DEBUG_DIDS: Record<string, true> = {
   'did:plc:2dzyut5lxna5ljiaasgeuffz': true, // darrin.bsky.team
 }
 
-const BASE_FEEDBACK_FORM_URL = `${HELP_DESK_URL}/requests/new`
+const BASE_FEEDBACK_FORM_URL = `${MEADOW_REPOSITORY_URL}/issues/new`
 export function FEEDBACK_FORM_URL({
-  email,
-  handle,
+  email: _email,
+  handle: _handle,
 }: {
   email?: string
   handle?: string
 }): string {
-  let str = BASE_FEEDBACK_FORM_URL
-  if (email) {
-    str += `?tf_anonymous_requester_email=${encodeURIComponent(email)}`
-    if (handle) {
-      str += `&tf_17205412673421=${encodeURIComponent(handle)}`
-    }
-  }
-  return str
+  const url = new URL(BASE_FEEDBACK_FORM_URL)
+  url.searchParams.set('template', 'support.yml')
+  return url.toString()
 }
 
 export const MAX_DISPLAY_NAME = 64
@@ -122,7 +120,8 @@ export function LINK_META_PROXY(_serviceUrl: string) {
   return PROD_LINK_META_PROXY
 }
 
-export const STATUS_PAGE_URL = 'https://status.bsky.app/'
+export const STATUS_PAGE_URL =
+  'https://multiplicity-service-hatsunemiku.zocomputer.io/health'
 
 // Hitslop constants
 export const createHitslop = (size: number): Insets => ({
@@ -219,8 +218,7 @@ export const urls = {
       searchTipsAndTricks: 'https://bsky.social/about/blog/05-31-2024-search',
     },
     support: {
-      findFriendsPrivacyPolicy:
-        'https://bsky.social/about/support/find-friends-privacy-policy',
+      findFriendsPrivacyPolicy: `${MEADOW_POLICY_BASE_URL}/privacy.md`,
     },
   },
 }
@@ -256,8 +254,10 @@ export const BLUESKY_NOTIF_SERVICE_HEADERS = {
 }
 
 export const webLinks = {
-  tos: `https://bsky.social/about/support/tos`,
-  privacy: `https://bsky.social/about/support/privacy-policy`,
-  community: `https://bsky.social/about/support/community-guidelines`,
-  communityDeprecated: `https://bsky.social/about/support/community-guidelines-deprecated`,
+  tos: `${MEADOW_POLICY_BASE_URL}/terms.md`,
+  privacy: `${MEADOW_POLICY_BASE_URL}/privacy.md`,
+  community: `${MEADOW_POLICY_BASE_URL}/community-guidelines.md`,
+  communityDeprecated: `${MEADOW_POLICY_BASE_URL}/community-guidelines.md`,
+  copyright: `${MEADOW_POLICY_BASE_URL}/copyright.md`,
+  support: HELP_DESK_URL,
 }

@@ -75,20 +75,5 @@
         "EXPO_PUBLIC_ENV": "testflight"
       }
     }
-  },
-  "submit": {
-    "production": {
-      "ios": {
-        "ascAppId": "6444370199"
-      },
-      "android": {
-        "track": "production"
-      }
-    },
-    "testflight-android": {
-      "android": {
-        "track": "internal"
-      }
-    }
   }
 }

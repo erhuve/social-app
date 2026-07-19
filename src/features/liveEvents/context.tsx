@@ -23,6 +23,7 @@ export const DEFAULT_LIVE_EVENTS = {
 }
 
 async function fetchLiveEvents(): Promise<LiveEventsWorkerResponse | null> {
+  if (!LIVE_EVENTS_URL) return null
   try {
     const res = await fetch(`${LIVE_EVENTS_URL}/config`)
     if (!res.ok) return null
@@ -49,6 +50,7 @@ export function Provider({children}: React.PropsWithChildren<{}>) {
       // keep this, prefectching handles initial load
       staleTime: 1000 * 15,
       queryKey: liveEventsQueryKey,
+      enabled: Boolean(LIVE_EVENTS_URL),
       refetchInterval: 1000 * 60 * 5, // refetch every 5 minutes
       async queryFn() {
         return fetchLiveEvents()
