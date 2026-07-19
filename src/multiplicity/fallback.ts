@@ -6,6 +6,7 @@ export function createFallbackAction(
 ): MultiplicityActionState {
   return {
     count: Math.max(0, count ?? 0, viewerRecordUri ? 1 : 0),
+    extraCount: 0,
     viewerRecordUris: viewerRecordUri ? [viewerRecordUri] : [],
   }
 }

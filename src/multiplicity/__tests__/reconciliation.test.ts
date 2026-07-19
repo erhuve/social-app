@@ -1,3 +1,4 @@
+import {addPendingRecord, removeRecords} from '../action-state'
 import {
   applyMultiplicityOverlay,
   commitMultiplicityRemoval,
@@ -28,6 +29,53 @@ describe('multiplicity reconciliation', () => {
         {count: 100, viewerRecordUris: [URI]},
       ),
     ).toEqual({count: 100, viewerRecordUris: [URI]})
+  })
+
+  it('adds indexed repeated records to AppView\'s actor-collapsed count', () => {
+    expect(
+      mergeMultiplicityAction(
+        {count: 19, extraCount: 17, viewerRecordUris: [URI]},
+        {count: 29, viewerRecordUris: [URI]},
+      ),
+    ).toEqual({count: 46, extraCount: 17, viewerRecordUris: [URI]})
+  })
+
+  it('counts a fallback viewer record missing from a partial index', () => {
+    const fallbackUri =
+      'at://did:plc:viewer/app.bsky.feed.like/appview-canonical'
+    expect(
+      mergeMultiplicityAction(
+        {count: 1, extraCount: 0, viewerRecordUris: [URI]},
+        {count: 29, viewerRecordUris: [fallbackUri]},
+      ),
+    ).toEqual({
+      count: 30,
+      extraCount: 1,
+      viewerRecordUris: [URI, fallbackUri],
+    })
+  })
+
+  it('preserves repeated-record metadata through optimistic changes', () => {
+    const pending = 'pending:like:next'
+    const indexed = {
+      count: 46,
+      extraCount: 17,
+      viewerRecordUris: [URI],
+    }
+    markMultiplicityAddition(KEY, pending)
+    const added = addPendingRecord(indexed, pending)
+    expect(
+      applyMultiplicityOverlay(KEY, added, {
+        count: 30,
+        viewerRecordUris: [URI],
+      }),
+    ).toEqual({
+      count: 48,
+      extraCount: 18,
+      viewerRecordUris: [pending, URI],
+    })
+
+    expect(removeRecords(added, [pending])).toEqual(indexed)
   })
 
   it('bounds merged and overlaid viewer record lists', () => {
@@ -291,7 +339,7 @@ describe('multiplicity reconciliation', () => {
     const result = applyMultiplicityOverlay(
       KEY,
       {count: 2, viewerRecordUris: [URI, secondUri]},
-      {count: 2, viewerRecordUris: [URI, secondUri]},
+      {count: 1, viewerRecordUris: [URI]},
     )
     expect(result.count).toBe(MAX_RECONCILIATION_RECORDS_PER_OVERLAY + 1)
   })

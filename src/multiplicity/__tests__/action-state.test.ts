@@ -9,6 +9,7 @@ import {MAX_VIEWER_RECORD_URIS} from '../types'
 describe('multiplicity action state', () => {
   const initial = {
     count: 4,
+    extraCount: 1,
     viewerRecordUris: ['at://viewer/like/new', 'at://viewer/like/old'],
   }
 
@@ -16,6 +17,7 @@ describe('multiplicity action state', () => {
     const pending = addPendingRecord(initial, 'pending:1')
     expect(pending).toEqual({
       count: 5,
+      extraCount: 2,
       viewerRecordUris: [
         'pending:1',
         'at://viewer/like/new',
@@ -26,6 +28,7 @@ describe('multiplicity action state', () => {
       confirmPendingRecord(pending, 'pending:1', 'at://viewer/like/newest'),
     ).toEqual({
       count: 5,
+      extraCount: 2,
       viewerRecordUris: [
         'at://viewer/like/newest',
         'at://viewer/like/new',
@@ -63,6 +66,7 @@ describe('multiplicity action state', () => {
       ),
     ).toEqual({
       count: 5,
+      extraCount: 2,
       viewerRecordUris: [
         'at://viewer/like/newest',
         'at://viewer/like/new',
@@ -92,6 +96,7 @@ describe('multiplicity action state', () => {
       ]),
     ).toEqual({
       count: 4,
+      extraCount: 1,
       viewerRecordUris: ['at://viewer/like/new', 'at://viewer/like/old'],
     })
   })

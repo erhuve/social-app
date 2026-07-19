@@ -75,6 +75,16 @@ export function mergeMultiplicityAction(
   indexed: MultiplicityActionState,
   fallback: MultiplicityActionState,
 ): MultiplicityActionState {
+  const indexedExtraCount =
+    indexed.extraCount ?? Math.max(0, indexed.viewerRecordUris.length - 1)
+  const fallbackOnlyViewerRecords =
+    indexed.viewerRecordUris.length > 0 &&
+    indexed.viewerRecordUris.length < MAX_VIEWER_RECORD_URIS
+      ? fallback.viewerRecordUris.filter(
+          uri => !indexed.viewerRecordUris.includes(uri),
+        ).length
+      : 0
+  const extraCount = indexedExtraCount + fallbackOnlyViewerRecords
   const viewerRecordUris = [
     ...indexed.viewerRecordUris,
     ...fallback.viewerRecordUris.filter(
@@ -82,7 +92,12 @@ export function mergeMultiplicityAction(
     ),
   ].slice(0, MAX_VIEWER_RECORD_URIS)
   return {
-    count: Math.max(indexed.count, fallback.count, viewerRecordUris.length),
+    count: Math.max(
+      indexed.count,
+      fallback.count + extraCount,
+      viewerRecordUris.length,
+    ),
+    ...(extraCount > 0 ? {extraCount} : {}),
     viewerRecordUris,
   }
 }
@@ -130,15 +145,22 @@ export function applyMultiplicityOverlay(
     uri => !overlay.removed.has(uri),
   )
   const removedFromBase = base.viewerRecordUris.length - viewerRecordUris.length
+  const removedExtras = Math.min(
+    removedFromBase,
+    Math.max(0, base.viewerRecordUris.length - 1),
+  )
+  let extraCount = Math.max(0, (base.extraCount ?? 0) - removedExtras)
   let count = Math.max(0, base.count - removedFromBase)
   for (const uri of overlay.added) {
     if (!overlay.removed.has(uri) && !viewerRecordUris.includes(uri)) {
+      if (viewerRecordUris.length > 0) extraCount += 1
       viewerRecordUris.unshift(uri)
       count += 1
     }
   }
   return {
     count: Math.max(count, viewerRecordUris.length),
+    ...(extraCount > 0 ? {extraCount} : {}),
     viewerRecordUris: viewerRecordUris.slice(0, MAX_VIEWER_RECORD_URIS),
   }
 }

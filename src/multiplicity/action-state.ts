@@ -11,8 +11,12 @@ export function addPendingRecord(
   pendingUri: string,
 ): MultiplicityActionState {
   assertCanAddMultiplicityRecord(state)
+  const extraCount =
+    (state.extraCount ?? Math.max(0, state.viewerRecordUris.length - 1)) +
+    (state.viewerRecordUris.length > 0 ? 1 : 0)
   return {
     count: state.count + 1,
+    ...(extraCount > 0 ? {extraCount} : {}),
     viewerRecordUris: [pendingUri, ...state.viewerRecordUris],
   }
 }
@@ -42,8 +46,18 @@ export function removeRecords(
     uri => !removed.has(uri),
   )
   const removedCount = state.viewerRecordUris.length - viewerRecordUris.length
+  const removedExtras = Math.min(
+    removedCount,
+    Math.max(0, state.viewerRecordUris.length - 1),
+  )
+  const extraCount = Math.max(
+    0,
+    (state.extraCount ?? Math.max(0, state.viewerRecordUris.length - 1)) -
+      removedExtras,
+  )
   return {
     count: Math.max(0, state.count - removedCount),
+    ...(extraCount > 0 ? {extraCount} : {}),
     viewerRecordUris,
   }
 }
@@ -54,8 +68,18 @@ export function restoreRecords(
 ): MultiplicityActionState {
   const existing = new Set(state.viewerRecordUris)
   const restored = recordUris.filter(uri => !existing.has(uri))
+  const previousViewerExtras = Math.max(0, state.viewerRecordUris.length - 1)
+  const restoredViewerExtras = Math.max(
+    0,
+    state.viewerRecordUris.length + restored.length - 1,
+  )
+  const extraCount =
+    (state.extraCount ?? previousViewerExtras) +
+    restoredViewerExtras -
+    previousViewerExtras
   return {
     count: state.count + restored.length,
+    ...(extraCount > 0 ? {extraCount} : {}),
     viewerRecordUris: [...restored, ...state.viewerRecordUris].slice(
       0,
       MAX_VIEWER_RECORD_URIS,

@@ -16,6 +16,7 @@ function serviceResponse() {
       [POST_URI]: {
         like: {
           count: 3,
+          extraCount: 2,
           viewerRecordUris: ['at://did:plc:alice/app.bsky.feed.like/one'],
         },
         repost: {count: 0, viewerRecordUris: []},
@@ -65,6 +66,7 @@ describe('createHttpMultiplicityAdapter', () => {
     )
     expect(Object.keys(result.posts)).toEqual([POST_URI])
     expect(result.posts[POST_URI].like.count).toBe(3)
+    expect(result.posts[POST_URI].like.extraCount).toBe(2)
   })
 
   it('rejects service errors', async () => {

@@ -45,6 +45,16 @@ function cloneActionState(
     throw new Error('Multiplicity count must be a non-negative safe integer')
   }
   if (
+    state.extraCount !== undefined &&
+    (!Number.isSafeInteger(state.extraCount) ||
+      (state.extraCount as number) < 0 ||
+      (state.extraCount as number) > (state.count as number))
+  ) {
+    throw new Error(
+      'Multiplicity extra count must be a non-negative safe integer no greater than count',
+    )
+  }
+  if (
     !Array.isArray(state.viewerRecordUris) ||
     state.viewerRecordUris.some(uri => typeof uri !== 'string')
   ) {
@@ -70,8 +80,17 @@ function cloneActionState(
   if (state.viewerRecordUris.length > (state.count as number)) {
     throw new Error('Viewer record count cannot exceed aggregate count')
   }
+  if (
+    state.extraCount !== undefined &&
+    (state.extraCount as number) < Math.max(0, state.viewerRecordUris.length - 1)
+  ) {
+    throw new Error('Multiplicity extra count cannot omit repeated viewer records')
+  }
   return {
     count: state.count as number,
+    ...(state.extraCount !== undefined
+      ? {extraCount: state.extraCount as number}
+      : {}),
     viewerRecordUris: [...state.viewerRecordUris] as string[],
   }
 }

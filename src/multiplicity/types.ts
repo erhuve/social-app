@@ -2,6 +2,7 @@ export const MAX_VIEWER_RECORD_URIS = 1_000
 
 export type MultiplicityActionState = {
   count: number
+  extraCount?: number
   viewerRecordUris: readonly string[]
 }
 
