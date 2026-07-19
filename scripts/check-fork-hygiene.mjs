@@ -10,12 +10,16 @@ const banned = [
   'https://live-events.workers.bsky.app',
   'https://app-config.workers.bsky.app',
   'https://updates.bsky.app',
+  'support@bsky.app',
+  'security@bsky.app',
+  'https://bsky.social/about/join',
   "owner: 'blueskysocial'",
   "organization: 'blueskyweb'",
   '<title>Bluesky</title>',
   '<!-- Bluesky SVG -->',
 ]
 const artifactBanned = ['https://go.bsky.app/redirect?u=']
+const bannedPatterns = [/["']https:\/\/bsky\.social\/about\/blog["']/]
 const templateBrandingBanned = [
   'Bluesky Social',
   ' on Bluesky',
@@ -35,7 +39,17 @@ function collect(path) {
     if (statSync(child).isDirectory()) {
       files.push(...collect(relative(root, child)))
     } else if (
-      ['.js', '.json', '.mjs', '.ts', '.tsx', '.html'].includes(extname(child))
+      [
+        '.go',
+        '.html',
+        '.js',
+        '.json',
+        '.md',
+        '.mjs',
+        '.ts',
+        '.tsx',
+        '.txt',
+      ].includes(extname(child))
     ) {
       files.push(child)
     }
@@ -45,11 +59,16 @@ function collect(path) {
 
 const inputs = [
   'src',
+  'README.md',
+  'SECURITY.md',
   'app.config.js',
   'webpack.config.js',
   'scripts/bundleUpdate.sh',
   'web/index.html',
   'bskyweb/templates',
+  'bskyweb/cmd',
+  'bskyweb/static/.well-known',
+  'bskyweb/embedr-static/.well-known',
   ...process.argv.slice(2),
 ]
 const findings = []
@@ -59,6 +78,11 @@ for (const file of inputs.flatMap(collect)) {
   for (const value of banned) {
     if (content.includes(value)) {
       findings.push(`${relative(root, file)} contains ${JSON.stringify(value)}`)
+    }
+  }
+  for (const pattern of bannedPatterns) {
+    if (pattern.test(content)) {
+      findings.push(`${relative(root, file)} matches ${pattern}`)
     }
   }
   if (file.startsWith(join(root, 'web-build'))) {

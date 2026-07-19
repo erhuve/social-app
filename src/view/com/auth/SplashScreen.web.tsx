@@ -4,6 +4,7 @@ import {msg} from '@lingui/core/macro'
 import {useLingui} from '@lingui/react'
 import {Trans} from '@lingui/react/macro'
 
+import {webLinks} from '#/lib/constants'
 import {useWebMediaQueries} from '#/lib/hooks/useWebMediaQueries'
 import {ErrorBoundary} from '#/view/com/util/ErrorBoundary'
 import {Logo} from '#/view/icons/Logo'
@@ -166,21 +167,19 @@ function Footer() {
         t.atoms.border_contrast_medium,
       ]}>
       <InlineLinkText
-        label={_(msg`Learn more about Bluesky`)}
-        to="https://bsky.social">
-        <Trans>Business</Trans>
+        label={_(msg`Get support for Meadow`)}
+        to={webLinks.support}>
+        <Trans>Support</Trans>
       </InlineLinkText>
       <InlineLinkText
-        label={_(msg`Read the Bluesky blog`)}
-        to="https://bsky.social/about/blog">
-        <Trans>Blog</Trans>
+        label={_(msg`Read the Meadow privacy notice`)}
+        to={webLinks.privacy}>
+        <Trans>Privacy</Trans>
       </InlineLinkText>
       <InlineLinkText
-        label={_(msg`See jobs at Bluesky`)}
-        to="https://bsky.social/about/join">
-        <Trans comment="Link to a page with job openings at Bluesky">
-          Jobs
-        </Trans>
+        label={_(msg`Read the Meadow public beta terms`)}
+        to={webLinks.tos}>
+        <Trans>Terms</Trans>
       </InlineLinkText>
 
       <View style={a.flex_1} />

@@ -1,4 +1,4 @@
-Contact: mailto:security@bsky.app
+Contact: https://github.com/erhuve/social-app/security/policy
+Expires: 2027-07-18T23:59:59Z
 Preferred-Languages: en
-Canonical: https://bsky.app/.well-known/security.txt
-Acknowledgements: https://github.com/bluesky-social/atproto/blob/main/CONTRIBUTORS.md
+Canonical: https://raw.githubusercontent.com/erhuve/social-app/main/bskyweb/embedr-static/.well-known/security.txt

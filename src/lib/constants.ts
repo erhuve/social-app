@@ -215,7 +215,7 @@ export const urls = {
       findFriendsAnnouncement:
         'https://bsky.social/about/blog/12-16-2025-find-friends',
       initialVerificationAnnouncement: `https://bsky.social/about/blog/04-21-2025-verification`,
-      searchTipsAndTricks: 'https://bsky.social/about/blog/05-31-2024-search',
+      searchTipsAndTricks: `${MEADOW_POLICY_BASE_URL}/search.md`,
     },
     support: {
       findFriendsPrivacyPolicy: `${MEADOW_POLICY_BASE_URL}/privacy.md`,

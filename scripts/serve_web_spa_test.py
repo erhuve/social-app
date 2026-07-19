@@ -17,6 +17,8 @@ class SPARequestHandlerTest(unittest.TestCase):
         (root / "index.html").write_text("app shell")
         (root / "assets").mkdir()
         (root / "assets" / "app.js").write_text("bundle")
+        (root / ".well-known").mkdir()
+        (root / ".well-known" / "security.txt").write_text("security contact")
         handler = partial(SPARequestHandler, directory=root)
         self.server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
@@ -53,6 +55,11 @@ class SPARequestHandlerTest(unittest.TestCase):
     def test_existing_asset_is_served(self):
         with self.request("/assets/app.js") as response:
             self.assertEqual(response.read(), b"bundle")
+
+    def test_security_policy_is_served_as_a_static_file(self):
+        with self.request("/.well-known/security.txt", "text/plain") as response:
+            self.assertEqual(response.status, 200)
+            self.assertEqual(response.read(), b"security contact")
 
     def test_missing_asset_remains_404(self):
         with self.assertRaises(urllib.error.HTTPError) as error:

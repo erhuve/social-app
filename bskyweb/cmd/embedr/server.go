@@ -144,7 +144,7 @@ func serve(cctx *cli.Context) error {
 			return id, nil
 		},
 		DenyHandler: func(c echo.Context, identifier string, err error) error {
-			return c.String(http.StatusTooManyRequests, "Your request has been rate limited. Please try again later. Contact support@bsky.app if you believe this was a mistake.\n")
+			return c.String(http.StatusTooManyRequests, "Your request has been rate limited. Please try again later. Visit https://github.com/erhuve/social-app/blob/main/docs/meadow/support.md if you believe this was a mistake.\n")
 		},
 	}))
 

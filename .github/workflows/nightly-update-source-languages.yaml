@@ -6,6 +6,7 @@ on:
 
 jobs:
   extract-languages:
+    if: github.repository == 'bluesky-social/social-app'
     name: Nightly Update Source Languages
     runs-on: ubuntu-latest
 

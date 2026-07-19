@@ -1,14 +1,18 @@
+import {onAppStateChange} from '#/lib/appState'
 import {MetricsClient} from './client'
 
 let appStateCallback: (state: string) => void
 let mockMetricsApiHost: string | undefined = 'https://test.metrics.api'
+let mockIsWeb = false
 
 jest.mock('#/lib/appState', () => ({
-  onAppStateChange: jest.fn(cb => {
+  onAppStateChange: jest.fn((cb: (state: string) => void) => {
     appStateCallback = cb
     return {remove: jest.fn()}
   }),
 }))
+
+const mockOnAppStateChange = jest.mocked(onAppStateChange)
 
 jest.mock('#/logger', () => ({
   Logger: {
@@ -25,7 +29,9 @@ jest.mock('#/env', () => ({
   get METRICS_API_HOST() {
     return mockMetricsApiHost
   },
-  IS_WEB: false,
+  get IS_WEB() {
+    return mockIsWeb
+  },
 }))
 
 type TestEvents = {
@@ -39,6 +45,7 @@ describe('MetricsClient', () => {
 
   beforeEach(() => {
     mockMetricsApiHost = 'https://test.metrics.api'
+    mockIsWeb = false
     jest.useFakeTimers({advanceTimers: true})
     fetchRequests = []
     fetchMock = jest.fn().mockImplementation(async (_url, options) => {
@@ -72,13 +79,29 @@ describe('MetricsClient', () => {
 
   it('does not queue or transmit events when telemetry is unconfigured', async () => {
     mockMetricsApiHost = undefined
+    mockIsWeb = true
+    const sendBeacon = jest.fn()
+    const originalNavigator = globalThis.navigator
+    Object.defineProperty(globalThis, 'navigator', {
+      configurable: true,
+      value: {...globalThis.navigator, sendBeacon},
+    })
     const client = new MetricsClient<TestEvents>()
     client.track('click', {button: 'submit'})
 
     await jest.advanceTimersByTimeAsync(10_000)
+    mockMetricsApiHost = 'https://test.metrics.api'
+    client.flush()
 
     expect(fetchRequests).toHaveLength(0)
     expect(fetchMock).not.toHaveBeenCalled()
+    expect(sendBeacon).not.toHaveBeenCalled()
+    expect(jest.getTimerCount()).toBe(0)
+    expect(mockOnAppStateChange).not.toHaveBeenCalled()
+    Object.defineProperty(globalThis, 'navigator', {
+      configurable: true,
+      value: originalNavigator,
+    })
   })
 
   it('flushes when maxBatchSize is exceeded', async () => {

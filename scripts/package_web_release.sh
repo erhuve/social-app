@@ -16,6 +16,7 @@ artifact_dir=${ARTIFACT_DIR:-artifacts}
 archive="$artifact_dir/meadow-web-$commit.tar.gz"
 
 test -f web-build/index.html
+test -f web-build/.well-known/security.txt
 mkdir -p "$artifact_dir"
 
 python3 - "$commit" "$source_date_epoch" <<'PY'

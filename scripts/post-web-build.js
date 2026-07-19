@@ -1,3 +1,4 @@
+/* eslint-disable import/no-nodejs-modules, typescript/no-unsafe-call, typescript/no-unsafe-member-access */
 const path = require('path')
 const fs = require('fs')
 
@@ -19,8 +20,25 @@ delete webManifest.related_applications
 delete webManifest.prefer_related_applications
 fs.writeFileSync(webManifestFile, `${JSON.stringify(webManifest, null, 2)}\n`)
 
+const securitySource = path.join(
+  projectRoot,
+  'bskyweb',
+  'static',
+  '.well-known',
+  'security.txt',
+)
+const securityTarget = path.join(
+  projectRoot,
+  'web-build',
+  '.well-known',
+  'security.txt',
+)
+fs.mkdirSync(path.dirname(securityTarget), {recursive: true})
+fs.copyFileSync(securitySource, securityTarget)
+
 console.log(`Found ${entrypoints.length} entrypoints`)
 console.log(`Writing ${templateFile}`)
+console.log(`Copied ${securitySource} to ${securityTarget}`)
 
 const outputFile = entrypoints
   .map(name => {

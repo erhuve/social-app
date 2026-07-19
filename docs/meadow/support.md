@@ -4,7 +4,7 @@ Meadow is an independent, experimental AT Protocol client and is not operated
 by or affiliated with Bluesky Social PBC.
 
 For Meadow client or multiplicity problems, open a private-safe issue in the
-[Meadow repository](https://github.com/erhuve/social-app/issues/new). Do not
+[Meadow repository](https://github.com/erhuve/social-app/issues/new?template=support.yml). Do not
 include passwords, app passwords, access tokens, private messages, email
 addresses, or other sensitive information.
 
