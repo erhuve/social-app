@@ -51,6 +51,7 @@ test('direct post deep link hydrates with root-relative bundles', async ({
   page,
 }) => {
   await expectAppToHydrate(page, '/profile/agnoster.net/post/3mqubzdvkdc2a')
+  await expect(page).toHaveTitle(/ — Meadow$/)
   expect(new URL(page.url()).pathname).toBe(
     '/profile/agnoster.net/post/3mqubzdvkdc2a',
   )

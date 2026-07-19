@@ -43,7 +43,7 @@ import {
   type SearchTabNavigatorParams,
   type State,
 } from '#/lib/routes/types'
-import {bskyTitle} from '#/lib/strings/headings'
+import {meadowTitle} from '#/lib/strings/headings'
 import {CHAT_INVITE_CODE_REGEX} from '#/lib/strings/url-helpers'
 import {useUnreadNotifications} from '#/state/queries/notifications/unread'
 import {useSession} from '#/state/session'
@@ -158,7 +158,7 @@ const Tab = createBottomTabNavigator<BottomTabNavigatorParams>()
  */
 function commonScreens(Stack: typeof Flat, unreadCountLabel?: string) {
   const title = (page: MessageDescriptor) =>
-    bskyTitle(i18n._(page), unreadCountLabel)
+    meadowTitle(i18n._(page), unreadCountLabel)
 
   return (
     <>
@@ -222,7 +222,7 @@ function commonScreens(Stack: typeof Flat, unreadCountLabel?: string) {
         name="Profile"
         getComponent={() => ProfileScreen}
         options={({route}) => ({
-          title: bskyTitle(`@${route.params.name}`, unreadCountLabel),
+          title: meadowTitle(`@${route.params.name}`, unreadCountLabel),
         })}
       />
       <Stack.Screen
@@ -742,7 +742,8 @@ const FlatNavigator = ({
   const t = useTheme()
   const numUnread = useUnreadNotifications()
   const screenListeners = useWebScrollRestoration()
-  const title = (page: MessageDescriptor) => bskyTitle(i18n._(page), numUnread)
+  const title = (page: MessageDescriptor) =>
+    meadowTitle(i18n._(page), numUnread)
 
   return (
     <Flat.Navigator

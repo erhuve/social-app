@@ -1,4 +1,4 @@
-export function bskyTitle(page: string, unreadCountLabel?: string) {
+export function meadowTitle(page: string, unreadCountLabel?: string) {
   const unreadPrefix = unreadCountLabel ? `(${unreadCountLabel}) ` : ''
-  return `${unreadPrefix}${page} — Bluesky`
+  return `${unreadPrefix}${page} — Meadow`
 }
