@@ -1,6 +1,7 @@
 /* eslint-disable import/no-nodejs-modules, typescript/no-unsafe-call, typescript/no-unsafe-member-access */
 const path = require('path')
 const fs = require('fs')
+const crypto = require('crypto')
 
 const projectRoot = path.join(__dirname, '..')
 const templateFile = path.join(
@@ -36,9 +37,35 @@ const securityTarget = path.join(
 fs.mkdirSync(path.dirname(securityTarget), {recursive: true})
 fs.copyFileSync(securitySource, securityTarget)
 
+const globalStyleSource = path.join(projectRoot, 'src', 'style.css')
+const globalStyle = fs.readFileSync(globalStyleSource)
+const globalStyleHash = crypto
+  .createHash('sha256')
+  .update(globalStyle)
+  .digest('hex')
+  .slice(0, 16)
+const globalStyleName = `style.${globalStyleHash}.css`
+const globalStyleTarget = path.join(
+  projectRoot,
+  'web-build',
+  'static',
+  globalStyleName,
+)
+fs.writeFileSync(globalStyleTarget, globalStyle)
+const indexFile = path.join(projectRoot, 'web-build', 'index.html')
+const indexHtml = fs.readFileSync(indexFile, 'utf8')
+if (!indexHtml.includes('/static/style.css')) {
+  throw new Error('Generated index is missing the global stylesheet reference')
+}
+fs.writeFileSync(
+  indexFile,
+  indexHtml.replace('/static/style.css', `/static/${globalStyleName}`),
+)
+
 console.log(`Found ${entrypoints.length} entrypoints`)
 console.log(`Writing ${templateFile}`)
 console.log(`Copied ${securitySource} to ${securityTarget}`)
+console.log(`Copied ${globalStyleSource} to ${globalStyleTarget}`)
 
 const outputFile = entrypoints
   .map(name => {

@@ -10,6 +10,7 @@ on:
 concurrency:
   group: '${{ github.workflow }}-${{ github.ref }}'
   cancel-in-progress: false
+  queue: max
 
 permissions:
   contents: read
@@ -52,6 +53,11 @@ jobs:
       - name: Verify packaged artifact
         if: github.event_name != 'pull_request'
         run: (cd artifacts && sha256sum -c "meadow-web-$GITHUB_SHA.tar.gz.sha256")
+      - name: Verify release lifecycle
+        if: github.event_name != 'pull_request'
+        env:
+          MEADOW_TEST_PACKAGED_ARTIFACT: artifacts
+        run: python3 scripts/web_release_test.py
       - name: Upload release artifact
         if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -62,3 +68,45 @@ jobs:
             artifacts/meadow-web-${{ github.sha }}.tar.gz.sha256
           if-no-files-found: error
           retention-days: 90
+
+  attest:
+    name: Attest verified web release
+    needs: build
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - name: Download verified build artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: meadow-web-${{ github.sha }}
+          path: artifacts
+      - name: Attest packaged artifact provenance
+        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
+        with:
+          subject-path: artifacts/meadow-web-${{ github.sha }}.tar.gz
+
+  publish:
+    name: Publish durable web release
+    needs: attest
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Download verified build artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: meadow-web-${{ github.sha }}
+          path: artifacts
+      - name: Publish commit-addressed GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: scripts/publish_web_release.sh "$GITHUB_SHA"

@@ -33,6 +33,22 @@ pnpm check-fork-hygiene web-build
 Native Meadow releases are deliberately disabled until fork-owned signing, app
 groups, push identity, update infrastructure, and store records are configured.
 
+Web builds from `main` are published as durable GitHub Releases keyed by the full
+commit SHA. On the Zo deployment, activate or roll back a verified release with:
+
+```bash
+scripts/activate_web_release.sh <full-commit-sha>
+scripts/rollback_web_release.sh
+```
+
+Activation verifies GitHub's signed build provenance, the exact main-branch commit,
+the checksum, the manifest, and referenced assets before installing into `releases/`
+and atomically switching `current`. Rollback swaps `current` with `previous`; an
+on-disk switch journal makes interrupted activation or rollback recoverable on the
+next command. The SPA server should use `--directory current
+--fallback-directory previous` so clients loading across a switch can still fetch
+the prior release's hashed assets.
+
 ## Support and policies
 
 - [Support](./docs/meadow/support.md)
