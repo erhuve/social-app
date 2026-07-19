@@ -1,4 +1,4 @@
-import {type MultiplicityCapabilities} from './types'
+import {type MultiplicityCapabilities} from './types.ts'
 
 let capabilities: MultiplicityCapabilities | undefined
 let capabilitiesRequired = false

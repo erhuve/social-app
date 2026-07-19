@@ -5,7 +5,7 @@ import {
   type BskyAgent,
 } from '@atproto/api'
 
-import {assertMultiplicityWritesEnabled} from './capabilities'
+import {assertMultiplicityWritesEnabled} from './capabilities.ts'
 
 type StrongRef = {uri: string; cid: string}
 
