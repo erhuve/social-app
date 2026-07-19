@@ -74,13 +74,19 @@ if release_json=$(
     --json isDraft,tagName,targetCommitish 2>/dev/null
 ); then
   verify_release_metadata "$release_json"
-  verify_release_assets
   if [[ $(jq -r .isDraft <<<"$release_json") == true ]]; then
+    gh release upload "$tag" \
+      "$archive" \
+      "$checksum" \
+      --repo "$repo" \
+      --clobber
+    verify_release_assets
     gh release edit "$tag" --repo "$repo" --draft=false
     verify_tag
     echo "Recovered and published verified draft release $tag"
     exit 0
   fi
+  verify_release_assets
   verify_tag
   echo "Verified existing durable release $tag"
   exit 0

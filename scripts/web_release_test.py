@@ -55,6 +55,8 @@ elif args[:2] == ["release", "view"]:
     )
 elif args[:2] == ["release", "edit"]:
     Path(os.environ["MOCK_PUBLISHED_MARKER"]).touch()
+elif args[:2] == ["release", "upload"]:
+    Path(os.environ["MOCK_REPAIRED_MARKER"]).touch()
 else:
     raise SystemExit(f"unexpected gh invocation: {args}")
 """
@@ -255,12 +257,14 @@ else:
         ).strip()
         self.create_release(commit)
         marker = self.root / "published"
+        repaired = self.root / "repaired"
         env = {
             **os.environ,
             "PATH": f"{self.bin_dir}:{os.environ['PATH']}",
             "ARTIFACT_DIR": str(self.sources),
             "MOCK_ARTIFACT_DIR": str(self.sources),
             "MOCK_PUBLISHED_MARKER": str(marker),
+            "MOCK_REPAIRED_MARKER": str(repaired),
         }
 
         result = subprocess.run(
@@ -272,6 +276,7 @@ else:
             capture_output=True,
         )
         self.assertTrue(marker.is_file())
+        self.assertTrue(repaired.is_file())
         self.assertIn("Recovered and published verified draft", result.stdout)
 
     def test_unsafe_archive_cannot_escape_or_change_current(self):
