@@ -119,7 +119,20 @@ export function usePostMultiplicity(
     retry: 1,
   })
 
-  if (!query.data) return fallback
+  if (!query.data) {
+    if (
+      !viewerDid &&
+      adapter &&
+      query.isPending &&
+      query.errorUpdateCount === 0
+    ) {
+      return {
+        like: {...fallback.like, count: 0},
+        repost: {...fallback.repost, count: 0},
+      }
+    }
+    return fallback
+  }
   return {
     like: applyMultiplicityOverlay(
       multiplicityReconciliationKey(viewerDid, 'post', post.uri, 'like'),

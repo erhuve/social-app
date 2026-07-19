@@ -52,6 +52,10 @@ test('direct post deep link hydrates with root-relative bundles', async ({
 }) => {
   const targetPostUri =
     'at://did:plc:r2bjwiwlhmo26hh2sz27fqf3/app.bsky.feed.post/3mqubzdvkdc2a'
+  let releasePublicBatch!: () => void
+  const publicBatchDelay = new Promise<void>(resolve => {
+    releasePublicBatch = resolve
+  })
   const publicBatches: Array<{
     body: {postUris: string[]; actorDids: string[]; viewerDid?: string}
     authorization?: string
@@ -68,6 +72,7 @@ test('direct post deep link hydrates with root-relative bundles', async ({
         body,
         authorization: route.request().headers().authorization,
       })
+      await publicBatchDelay
       await route.fulfill({
         contentType: 'application/json',
         body: JSON.stringify({
@@ -83,7 +88,14 @@ test('direct post deep link hydrates with root-relative bundles', async ({
                         viewerRecordUris: [],
                       }
                     : {count: 0, extraCount: 0, viewerRecordUris: []},
-                repost: {count: 0, extraCount: 0, viewerRecordUris: []},
+                repost:
+                  uri === targetPostUri
+                    ? {
+                        count: 1_000_001,
+                        extraCount: 1_000_000,
+                        viewerRecordUris: [],
+                      }
+                    : {count: 0, extraCount: 0, viewerRecordUris: []},
               },
             ]),
           ),
@@ -112,6 +124,9 @@ test('direct post deep link hydrates with root-relative bundles', async ({
       publicBatches.some(batch => batch.body.postUris.includes(targetPostUri)),
     )
     .toBe(true)
+  await expect(page.getByTestId('likeCount')).toHaveCount(0)
+  await expect(page.getByTestId('repostCount-expanded')).toHaveCount(0)
+  releasePublicBatch()
   expect(publicBatches.every(batch => batch.body.viewerDid === undefined)).toBe(
     true,
   )
@@ -119,6 +134,19 @@ test('direct post deep link hydrates with root-relative bundles', async ({
     true,
   )
   await expect(page.getByTestId('likeCount').first()).toHaveText('1M')
+  await expect(page.getByTestId('repostCount-expanded')).toContainText('1M')
+})
+
+test('signed-out counts fall back after the public request fails', async ({
+  page,
+}) => {
+  await page.route(
+    'https://multiplicity-service-hatsunemiku.zocomputer.io/v1/multiplicity/public-batch',
+    route => route.fulfill({status: 503}),
+  )
+
+  await expectAppToHydrate(page, '/profile/agnoster.net/post/3mqubzdvkdc2a')
+  await expect(page.getByTestId('likeCount').first()).toBeVisible()
 })
 
 test('missing static bundles remain 404 responses', async ({request}) => {
