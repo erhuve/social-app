@@ -45,6 +45,18 @@ async function expectAppToHydrate(page: Page, path: string) {
 test('production home route hydrates', async ({page}) => {
   await expectAppToHydrate(page, '/')
   await expect(page.getByRole('tab', {name: 'Discover'})).toBeVisible()
+  await expect(page.getByLabel('Meadow').first()).toBeVisible()
+  await expect(page.getByLabel('Bluesky')).toHaveCount(0)
+})
+
+test('static and hydrated loaders use the Meadow mark', async ({request}) => {
+  const response = await request.get('/')
+  expect(response.status()).toBe(200)
+  const html = await response.text()
+
+  expect(html).toContain('aria-label="Meadow"')
+  expect(html).toContain('<circle cx="32" cy="17" r="11"')
+  expect(html).not.toContain('M13.873 3.805C21.21 9.332')
 })
 
 test('direct post deep link hydrates with root-relative bundles', async ({
@@ -177,4 +189,8 @@ test('main bundle includes Meadow policy copy', async ({request}) => {
   expect(bundle).toContain(
     'label:"Meadow Privacy Notice",children:"Privacy Notice"',
   )
+  expect(bundle).toContain('accessibilityLabel:"Meadow"')
+  expect(bundle).not.toContain('accessibilityLabel:"Bluesky"')
+  expect(bundle).not.toContain('M13.873 3.805C21.21 9.332')
+  expect(bundle).not.toContain('M8.478 6.252c1.503.538')
 })

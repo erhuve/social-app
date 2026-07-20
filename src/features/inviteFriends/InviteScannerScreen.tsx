@@ -102,7 +102,7 @@ export function InviteScannerScreen() {
               t.atoms.text_contrast_medium,
               {maxWidth: 320},
             ]}>
-            {l`Bluesky needs camera access to scan QR codes from other profiles.`}
+            {l`Meadow needs camera access to scan QR codes from other profiles.`}
           </Text>
           <Button
             label={l`Grant access`}

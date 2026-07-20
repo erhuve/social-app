@@ -17,6 +17,14 @@ const banned = [
   "organization: 'blueskyweb'",
   '<title>Bluesky</title>',
   '<!-- Bluesky SVG -->',
+  'accessibilityLabel="Bluesky"',
+  'M13.873 3.805C21.21 9.332',
+  'M8.478 6.252c1.503.538',
+]
+const sourceBrandingBanned = [
+  'label="Bluesky - Home"',
+  'Opens flow to create a new Bluesky account',
+  'Opens flow to sign in to your existing Bluesky account',
 ]
 const artifactBanned = ['https://go.bsky.app/redirect?u=']
 const bannedPatterns = [/["']https:\/\/bsky\.social\/about\/blog["']/]
@@ -83,6 +91,15 @@ for (const file of inputs.flatMap(collect)) {
   for (const pattern of bannedPatterns) {
     if (pattern.test(content)) {
       findings.push(`${relative(root, file)} matches ${pattern}`)
+    }
+  }
+  if (!file.startsWith(join(root, 'web-build'))) {
+    for (const value of sourceBrandingBanned) {
+      if (content.includes(value)) {
+        findings.push(
+          `${relative(root, file)} contains ${JSON.stringify(value)}`,
+        )
+      }
     }
   }
   if (file.startsWith(join(root, 'web-build'))) {

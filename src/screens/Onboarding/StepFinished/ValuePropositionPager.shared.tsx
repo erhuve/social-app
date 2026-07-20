@@ -24,7 +24,7 @@ export function useValuePropText(step: 0 | 1 | 2) {
         msg`No more doomscrolling junk-filled algorithms. Find feeds that work for you, not against you.`,
       ),
       alt: _(
-        msg`A collection of popular feeds you can find on Bluesky, including News, Booksky, Game Dev, Blacksky, and Fountain Pens`,
+        msg`A collection of popular feeds you can find on Meadow, including News, Booksky, Game Dev, Blacksky, and Fountain Pens`,
       ),
     },
     {
@@ -39,10 +39,10 @@ export function useValuePropText(step: 0 | 1 | 2) {
     {
       title: _(msg`Forget the noise`),
       description: _(
-        msg`No ads, no invasive tracking, no engagement traps. Bluesky respects your time and attention.`,
+        msg`See repeated likes, reposts, and follows instead of flattening every signal into one. Meadow keeps the full picture visible.`,
       ),
       alt: _(
-        msg`An illustration of several Bluesky posts alongside repost, like, and comment icons`,
+        msg`An illustration of several Meadow posts alongside repost, like, and comment icons`,
       ),
     },
   ][step]

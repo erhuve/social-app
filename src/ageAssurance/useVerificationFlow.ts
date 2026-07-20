@@ -114,7 +114,7 @@ export function useAgeAssuranceVerificationFlow({
           const {state} = unsafeGetAndComputeAgeAssurance({did})
           if (state.access === aa.Access.None) {
             Toast.show(
-              l`We're sorry, but based on the data shared by your device, you are not old enough to access Bluesky.`,
+              l`We're sorry, but based on the data shared by your device, you are not old enough to access Meadow.`,
               {type: 'info'},
             )
           } else if (state.access === aa.Access.Unknown) {

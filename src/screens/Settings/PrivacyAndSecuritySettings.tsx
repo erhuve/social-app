@@ -116,9 +116,9 @@ export function PrivacyAndSecuritySettingsScreen({}: Props) {
                 <Admonition.Content>
                   <Admonition.Text>
                     <Trans>
-                      Note: Bluesky is an open and public network. This setting
-                      only limits the visibility of your content on the Bluesky
-                      app and website, and other apps may not respect this
+                      Note: AT Protocol is an open and public network. This
+                      setting only limits the visibility of your content through
+                      the app and website, and other apps may not respect this
                       setting. Your content may still be shown to logged-out
                       users by other apps and websites.
                     </Trans>
@@ -126,10 +126,12 @@ export function PrivacyAndSecuritySettingsScreen({}: Props) {
                   <Admonition.Text>
                     <InlineLinkText
                       label={_(
-                        msg`Learn more about what is public on Bluesky.`,
+                        msg`Learn more about what is public on AT Protocol.`,
                       )}
                       to={webLinks.privacy}>
-                      <Trans>Learn more about what is public on Bluesky.</Trans>
+                      <Trans>
+                        Learn more about what is public on AT Protocol.
+                      </Trans>
                     </InlineLinkText>
                   </Admonition.Text>
                 </Admonition.Content>

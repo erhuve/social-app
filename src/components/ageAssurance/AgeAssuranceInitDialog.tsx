@@ -207,7 +207,7 @@ function Inner() {
                   process. If your email address has already been used to verify
                   your age for another game or service that uses KWS, you won’t
                   need to do it again. When you’re done, you'll be brought back
-                  to continue using Bluesky.
+                  to continue using Meadow.
                 </Trans>
               </Text>
               <Text style={[a.text_sm, a.leading_snug]}>

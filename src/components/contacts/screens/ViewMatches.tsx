@@ -313,7 +313,7 @@ export function ViewMatches({
             largeTitle
             subtitleText={
               <Trans>
-                Bluesky is more fun with friends. Do you want to invite some of
+                Meadow is more fun with friends. Do you want to invite some of
                 yours?{' '}
                 <InviteInfo
                   iconStyle={t.atoms.text_contrast_medium}
@@ -564,7 +564,7 @@ function ContactItem({
         </Text>
         {phoneNumber && currentAccount && (
           <Button
-            label={_(msg`Invite ${name} to join Bluesky`)}
+            label={_(msg`Invite ${name} to join Meadow`)}
             color="secondary"
             size="small"
             onPress={async () => {

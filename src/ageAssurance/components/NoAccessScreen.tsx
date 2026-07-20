@@ -172,7 +172,7 @@ export function NoAccessScreen() {
                         </Text>
                         <Text style={[textStyles]}>
                           <Trans>
-                            You are accessing Bluesky from a region that legally
+                            You are accessing Meadow from a region that legally
                             requires us to verify your age before allowing you
                             to access the app.
                           </Trans>
@@ -246,7 +246,7 @@ export function NoAccessScreen() {
                           <Text style={[textStyles]}>
                             <Trans>
                               Unfortunately, your declared age indicates that
-                              you are not old enough to access Bluesky in your
+                              you are not old enough to access Meadow in your
                               region.
                             </Trans>
                           </Text>
@@ -262,7 +262,7 @@ export function NoAccessScreen() {
                       <Text style={[textStyles]}>
                         <Trans>
                           Unfortunately, the birthdate you have saved to your
-                          profile makes you too young to access Bluesky.
+                          profile makes you too young to access Meadow.
                         </Trans>
                       </Text>
 
